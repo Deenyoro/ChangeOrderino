@@ -34,6 +34,9 @@ RUN npm run build
 # Stage 2: Serve with nginx
 FROM nginx:alpine
 
+# Install wget for health checks
+RUN apk add --no-cache wget
+
 # Copy built files from builder
 COPY --from=builder /app/dist /usr/share/nginx/html
 
