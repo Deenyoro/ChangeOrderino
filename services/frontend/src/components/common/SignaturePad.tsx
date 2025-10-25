@@ -60,7 +60,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
 
     // Update isEmpty state on stroke
     const handleStroke = () => {
-      setIsEmpty(signaturePadRef.current?.isEmpty() || true);
+      setIsEmpty(signaturePadRef.current?.isEmpty() ?? true);
     };
 
     signaturePadRef.current.addEventListener('endStroke', handleStroke);
