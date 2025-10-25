@@ -80,34 +80,34 @@ export const TNMTicketsPage: React.FC = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   RFCO / TNM #
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Title
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Project
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Proposal Date
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Proposal Amount
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Approved Amount
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Response Date
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Reminders
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Last Reminder
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
               </tr>
@@ -115,7 +115,7 @@ export const TNMTicketsPage: React.FC = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {tickets?.map((ticket) => (
                 <tr key={ticket.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-4 whitespace-nowrap">
+                  <td className="px-2 py-2 whitespace-nowrap">
                     <Link
                       to={`/tnm/${ticket.id}`}
                       className="text-sm font-medium text-primary-600 hover:text-primary-800"
@@ -123,35 +123,35 @@ export const TNMTicketsPage: React.FC = () => {
                       {ticket.rfco_number || ticket.tnm_number}
                     </Link>
                   </td>
-                  <td className="px-4 py-4">
+                  <td className="px-2 py-2">
                     <div className="text-sm text-gray-900 max-w-xs truncate" title={ticket.title}>
                       {ticket.title}
                     </div>
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
+                  <td className="px-2 py-2 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{ticket.project_number}</div>
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
+                  <td className="px-2 py-2 whitespace-nowrap">
                     <div className="text-sm text-gray-500">
                       {formatDate(ticket.proposal_date)}
                     </div>
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-right">
+                  <td className="px-2 py-2 whitespace-nowrap text-right">
                     <div className="text-sm font-semibold text-gray-900">
                       {formatCurrency(ticket.proposal_amount)}
                     </div>
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-right">
+                  <td className="px-2 py-2 whitespace-nowrap text-right">
                     <div className={`text-sm font-semibold ${ticket.approved_amount > 0 ? 'text-green-600' : 'text-gray-400'}`}>
                       {ticket.approved_amount > 0 ? formatCurrency(ticket.approved_amount) : '—'}
                     </div>
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
+                  <td className="px-2 py-2 whitespace-nowrap">
                     <div className="text-sm text-gray-500">
                       {ticket.response_date ? formatDate(ticket.response_date) : '—'}
                     </div>
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-center">
+                  <td className="px-2 py-2 whitespace-nowrap text-center">
                     {ticket.reminder_count > 0 ? (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                         {ticket.reminder_count}
@@ -160,7 +160,7 @@ export const TNMTicketsPage: React.FC = () => {
                       <span className="text-sm text-gray-400">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
+                  <td className="px-2 py-2 whitespace-nowrap">
                     <div className="text-sm text-gray-500">
                       {ticket.last_reminder_sent_at ? (
                         <span title={formatDateTime(ticket.last_reminder_sent_at)}>
@@ -171,7 +171,7 @@ export const TNMTicketsPage: React.FC = () => {
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
+                  <td className="px-2 py-2 whitespace-nowrap">
                     <StatusBadge status={ticket.status} />
                   </td>
                 </tr>
