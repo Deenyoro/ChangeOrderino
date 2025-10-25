@@ -10,10 +10,10 @@ from app.core.database import Base
 
 class LaborType(str, enum.Enum):
     """Labor type with associated rates"""
-    PROJECT_MANAGER = "project_manager"
-    SUPERINTENDENT = "superintendent"
-    CARPENTER = "carpenter"
-    LABORER = "laborer"
+    project_manager = "project_manager"
+    superintendent = "superintendent"
+    carpenter = "carpenter"
+    laborer = "laborer"
 
 
 class LaborItem(Base):
@@ -26,7 +26,7 @@ class LaborItem(Base):
     description = Column(Text, nullable=False)
     hours = Column(Numeric(8, 2), nullable=False)
     labor_type = Column(
-        SQLEnum(LaborType, name='labor_type', values_callable=lambda x: [e.value for e in x]),
+        SQLEnum(LaborType, name='labor_type'),
         nullable=False
     )
     rate_per_hour = Column(Numeric(8, 2), nullable=False)

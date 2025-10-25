@@ -77,7 +77,7 @@ async def get_dashboard_stats(
 
     # Sum of approved amounts
     approved_query = select(func.sum(TNMTicket.approved_amount)).where(
-        TNMTicket.status.in_([TNMStatus.APPROVED, TNMStatus.PARTIALLY_APPROVED])
+        TNMTicket.status.in_([TNMStatus.approved, TNMStatus.partially_approved])
     )
     if base_query_filters:
         approved_query = approved_query.where(*base_query_filters)
@@ -127,7 +127,7 @@ async def get_dashboard_stats(
 
     # Approved this week
     approved_week_query = select(func.count(TNMTicket.id)).where(
-        TNMTicket.status.in_([TNMStatus.APPROVED, TNMStatus.PARTIALLY_APPROVED]),
+        TNMTicket.status.in_([TNMStatus.approved, TNMStatus.partially_approved]),
         TNMTicket.response_date >= week_ago.date(),
         TNMTicket.response_date.isnot(None)
     )
@@ -150,7 +150,7 @@ async def get_dashboard_stats(
     # Overdue responses (sent > 14 days ago, no response)
     two_weeks_ago = now - timedelta(days=14)
     overdue_query = select(func.count(TNMTicket.id)).where(
-        TNMTicket.status.in_([TNMStatus.SENT, TNMStatus.VIEWED]),
+        TNMTicket.status.in_([TNMStatus.sent, TNMStatus.viewed]),
         TNMTicket.last_email_sent_at <= two_weeks_ago,
         TNMTicket.last_email_sent_at.isnot(None)
     )
@@ -167,7 +167,7 @@ async def get_dashboard_stats(
             func.extract('epoch', TNMTicket.last_email_sent_at - TNMTicket.created_at) / 3600
         )
     ).where(
-        TNMTicket.status != TNMStatus.DRAFT,
+        TNMTicket.status != TNMStatus.draft,
         TNMTicket.last_email_sent_at.isnot(None)
     )
     if base_query_filters:
@@ -198,7 +198,7 @@ async def get_dashboard_stats(
     ).where(
         TNMTicket.response_date.isnot(None),
         TNMTicket.last_email_sent_at.isnot(None),
-        TNMTicket.status == TNMStatus.APPROVED
+        TNMTicket.status == TNMStatus.approved
     )
     if base_query_filters:
         fastest_query = fastest_query.where(*base_query_filters)
@@ -214,7 +214,7 @@ async def get_dashboard_stats(
     ).where(
         TNMTicket.response_date.isnot(None),
         TNMTicket.last_email_sent_at.isnot(None),
-        TNMTicket.status == TNMStatus.APPROVED
+        TNMTicket.status == TNMStatus.approved
     )
     if base_query_filters:
         slowest_query = slowest_query.where(*base_query_filters)
@@ -234,7 +234,7 @@ async def get_dashboard_stats(
             func.sum(TNMTicket.proposal_amount).label('total_amount'),
             func.sum(
                 case(
-                    (TNMTicket.status.in_([TNMStatus.APPROVED, TNMStatus.PARTIALLY_APPROVED]), TNMTicket.approved_amount),
+                    (TNMTicket.status.in_([TNMStatus.approved, TNMStatus.partially_approved]), TNMTicket.approved_amount),
                     else_=0
                 )
             ).label('approved_amount'),

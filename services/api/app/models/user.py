@@ -9,11 +9,11 @@ from app.core.database import Base
 
 class UserRole(str, enum.Enum):
     """User roles"""
-    ADMIN = "admin"
-    FOREMAN = "foreman"
-    PROJECT_MANAGER = "project_manager"
-    OFFICE_STAFF = "office_staff"
-    VIEWER = "viewer"  # Legacy role - kept for backward compatibility
+    admin = "admin"
+    foreman = "foreman"
+    project_manager = "project_manager"
+    office_staff = "office_staff"
+    viewer = "viewer"  # Legacy role - kept for backward compatibility
 
 
 class User(Base):
@@ -26,9 +26,9 @@ class User(Base):
     username = Column(String(100), unique=True, nullable=False)
     full_name = Column(String(255))
     role = Column(
-        SQLEnum(UserRole, name='user_role', values_callable=lambda x: [e.value for e in x]),
+        SQLEnum(UserRole, name='user_role'),
         nullable=False,
-        default=UserRole.FOREMAN
+        default=UserRole.foreman
     )
     is_active = Column(Boolean, default=True)
     extra_metadata = Column(JSONB, default={})

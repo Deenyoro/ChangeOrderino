@@ -10,15 +10,15 @@ from app.core.database import Base
 
 class TNMStatus(str, enum.Enum):
     """TNM Ticket status"""
-    DRAFT = "draft"
-    PENDING_REVIEW = "pending_review"
-    READY_TO_SEND = "ready_to_send"
-    SENT = "sent"
-    VIEWED = "viewed"
-    PARTIALLY_APPROVED = "partially_approved"
-    APPROVED = "approved"
-    DENIED = "denied"
-    CANCELLED = "cancelled"
+    draft = "draft"
+    pending_review = "pending_review"
+    ready_to_send = "ready_to_send"
+    sent = "sent"
+    viewed = "viewed"
+    partially_approved = "partially_approved"
+    approved = "approved"
+    denied = "denied"
+    cancelled = "cancelled"
 
 
 class TNMTicket(Base):
@@ -48,9 +48,9 @@ class TNMTicket(Base):
 
     # Status
     status = Column(
-        SQLEnum(TNMStatus, name='tnm_status', values_callable=lambda x: [e.value for e in x]),
+        SQLEnum(TNMStatus, name='tnm_status'),
         nullable=False,
-        default=TNMStatus.DRAFT,
+        default=TNMStatus.draft,
         index=True
     )
 

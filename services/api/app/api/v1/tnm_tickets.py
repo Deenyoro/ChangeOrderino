@@ -413,7 +413,7 @@ async def send_rfco(
         raise HTTPException(status_code=404, detail="TNM ticket not found")
 
     # Verify ticket is ready to send
-    if ticket.status not in [TNMStatus.READY_TO_SEND, TNMStatus.PENDING_REVIEW]:
+    if ticket.status not in [TNMStatus.ready_to_send, TNMStatus.pending_review]:
         raise HTTPException(
             status_code=400,
             detail=f"Cannot send ticket with status '{ticket.status.value}'. Must be 'ready_to_send' or 'pending_review'."
@@ -424,7 +424,7 @@ async def send_rfco(
 
     # Update ticket
     old_status = ticket.status
-    ticket.status = TNMStatus.SENT
+    ticket.status = TNMStatus.sent
     ticket.approval_token = token
     ticket.approval_token_expires_at = expiration
     ticket.email_sent_count += 1
@@ -523,7 +523,7 @@ async def send_reminder(
         raise HTTPException(status_code=404, detail="TNM ticket not found")
 
     # Verify ticket has been sent at least once
-    if ticket.status not in [TNMStatus.SENT, TNMStatus.VIEWED, TNMStatus.PARTIALLY_APPROVED]:
+    if ticket.status not in [TNMStatus.sent, TNMStatus.viewed, TNMStatus.partially_approved]:
         raise HTTPException(
             status_code=400,
             detail=f"Cannot send reminder for ticket with status '{ticket.status.value}'. Must be sent first."
@@ -634,13 +634,13 @@ async def manual_approval_override(
 
     # Update status
     if approval_data.status == 'approved':
-        ticket.status = TNMStatus.APPROVED
+        ticket.status = TNMStatus.approved
         ticket.approved_amount = approval_data.approved_amount or ticket.proposal_amount
     elif approval_data.status == 'denied':
-        ticket.status = TNMStatus.DENIED
+        ticket.status = TNMStatus.denied
         ticket.approved_amount = 0
     elif approval_data.status == 'partially_approved':
-        ticket.status = TNMStatus.PARTIALLY_APPROVED
+        ticket.status = TNMStatus.partially_approved
         if approval_data.approved_amount is None:
             raise HTTPException(
                 status_code=400,

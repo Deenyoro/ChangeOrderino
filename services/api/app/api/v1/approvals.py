@@ -243,7 +243,7 @@ async def submit_approval(
             tnm_ticket_id=ticket.id,
             line_item_type=item_approval.line_item_type,
             line_item_id=item_approval.line_item_id,
-            status=ApprovalStatus.APPROVED if item_approval.status == 'approved' else ApprovalStatus.DENIED,
+            status=ApprovalStatus.approved if item_approval.status == 'approved' else ApprovalStatus.denied,
             approved_amount=item_approval.approved_amount,
             gc_comment=item_approval.comment,
             approved_at=datetime.utcnow(),

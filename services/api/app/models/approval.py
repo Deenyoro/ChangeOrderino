@@ -10,9 +10,9 @@ from app.core.database import Base
 
 class ApprovalStatus(str, enum.Enum):
     """Approval status"""
-    PENDING = "pending"
-    APPROVED = "approved"
-    DENIED = "denied"
+    pending = "pending"
+    approved = "approved"
+    denied = "denied"
 
 
 class LineItemApproval(Base):
@@ -26,9 +26,9 @@ class LineItemApproval(Base):
     line_item_id = Column(UUID(as_uuid=True), nullable=False, index=True)
 
     status = Column(
-        SQLEnum(ApprovalStatus, name='approval_status', values_callable=lambda x: [e.value for e in x]),
+        SQLEnum(ApprovalStatus, name='approval_status'),
         nullable=False,
-        default=ApprovalStatus.PENDING
+        default=ApprovalStatus.pending
     )
     approved_amount = Column(Numeric(12, 2))
     gc_comment = Column(Text)
