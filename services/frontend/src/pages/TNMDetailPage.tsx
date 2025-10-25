@@ -4,8 +4,17 @@
 
 import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Edit, Trash2, Send, Mail, FileDown } from 'lucide-react';
-import { useTNMTicket, useUpdateTNMStatus, useSendTNMForApproval, useDeleteTNMTicket, useUpdateTNMTicket } from '../hooks/useTNMTickets';
+import toast from 'react-hot-toast';
+import { ArrowLeft, Edit, Trash2, Send, Mail, FileDown, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import {
+  useTNMTicket,
+  useUpdateTNMStatus,
+  useSendTNMForApproval,
+  useDeleteTNMTicket,
+  useUpdateTNMTicket,
+  useSendReminder,
+  useManualApprovalOverride,
+} from '../hooks/useTNMTickets';
 import { useProject } from '../hooks/useProjects';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { StatusBadge } from '../components/common/StatusBadge';
@@ -27,12 +36,19 @@ export const TNMDetailPage: React.FC = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isOHPEditModalOpen, setIsOHPEditModalOpen] = useState(false);
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
+  const [isManualApprovalModalOpen, setIsManualApprovalModalOpen] = useState(false);
   const [gcEmail, setGcEmail] = useState('');
   const [customOHP, setCustomOHP] = useState({
     labor: 0,
     material: 0,
     equipment: 0,
     subcontractor: 0,
+  });
+  const [manualApprovalData, setManualApprovalData] = useState({
+    status: 'approved' as 'approved' | 'denied' | 'partially_approved',
+    approved_amount: 0,
+    reason: '',
+    notes: '',
   });
 
   const { data: ticket, isLoading } = useTNMTicket(id!);
@@ -41,6 +57,8 @@ export const TNMDetailPage: React.FC = () => {
   const sendMutation = useSendTNMForApproval();
   const deleteMutation = useDeleteTNMTicket();
   const updateMutation = useUpdateTNMTicket();
+  const remindMutation = useSendReminder();
+  const manualApprovalMutation = useManualApprovalOverride();
 
   React.useEffect(() => {
     if (ticket) {
@@ -87,7 +105,7 @@ export const TNMDetailPage: React.FC = () => {
 
   const handleSend = async () => {
     if (!gcEmail) {
-      alert('Please enter GC email address');
+      toast.error('Please enter GC email address');
       return;
     }
     await sendMutation.mutateAsync(ticket.id);
@@ -95,9 +113,20 @@ export const TNMDetailPage: React.FC = () => {
   };
 
   const handleRemindNow = async () => {
-    // Trigger reminder email
     try {
-      await sendMutation.mutateAsync(ticket.id);
+      await remindMutation.mutateAsync(ticket.id);
+    } catch (error) {
+      // Error handled by mutation
+    }
+  };
+
+  const handleManualApproval = async () => {
+    try {
+      await manualApprovalMutation.mutateAsync({
+        id: ticket.id,
+        data: manualApprovalData,
+      });
+      setIsManualApprovalModalOpen(false);
     } catch (error) {
       // Error handled by mutation
     }
@@ -175,6 +204,25 @@ export const TNMDetailPage: React.FC = () => {
             <Button variant="secondary" onClick={handleRemindNow}>
               <Mail className="w-4 h-4 mr-2" />
               Remind Now
+            </Button>
+          )}
+          {(ticket.status === TNMStatus.SENT ||
+            ticket.status === TNMStatus.VIEWED ||
+            ticket.status === TNMStatus.PARTIALLY_APPROVED) && (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setManualApprovalData({
+                  status: 'approved',
+                  approved_amount: ticket.proposal_amount,
+                  reason: '',
+                  notes: '',
+                });
+                setIsManualApprovalModalOpen(true);
+              }}
+            >
+              <Edit className="w-4 h-4 mr-2" />
+              Manual Override
             </Button>
           )}
           <Button variant="secondary" onClick={() => {/* Generate PDF */}}>
@@ -455,6 +503,208 @@ export const TNMDetailPage: React.FC = () => {
               <li>• PDF attachment with all line items</li>
               <li>• Secure approval link (no login required)</li>
             </ul>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Manual Approval Override Modal */}
+      <Modal
+        isOpen={isManualApprovalModalOpen}
+        onClose={() => setIsManualApprovalModalOpen(false)}
+        title="Manual Approval Override"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsManualApprovalModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleManualApproval} isLoading={manualApprovalMutation.isPending}>
+              Submit Override
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-5">
+          {/* Enhanced intro with icon */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex gap-3">
+            <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-blue-900 mb-1">Manual Override</p>
+              <p className="text-sm text-blue-700">
+                Record offline approvals from phone calls, emails, or in-person meetings.
+              </p>
+            </div>
+          </div>
+
+          {/* Enhanced status selection with visual cards */}
+          <div>
+            <label className="label mb-3">Approval Status *</label>
+            <div className="grid grid-cols-1 gap-2">
+              {/* Approved Option */}
+              <button
+                type="button"
+                onClick={() => setManualApprovalData({ ...manualApprovalData, status: 'approved', approved_amount: ticket.proposal_amount })}
+                className={`p-4 rounded-lg border-2 text-left transition-all ${
+                  manualApprovalData.status === 'approved'
+                    ? 'border-green-500 bg-green-50'
+                    : 'border-gray-200 hover:border-green-300 bg-white'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <CheckCircle className={`w-6 h-6 ${manualApprovalData.status === 'approved' ? 'text-green-600' : 'text-gray-400'}`} />
+                  <div className="flex-1">
+                    <div className={`font-semibold ${manualApprovalData.status === 'approved' ? 'text-green-900' : 'text-gray-900'}`}>
+                      Approved
+                    </div>
+                    <div className="text-sm text-gray-600">Full proposal amount approved</div>
+                  </div>
+                  {manualApprovalData.status === 'approved' && (
+                    <div className="text-sm font-semibold text-green-600">Selected</div>
+                  )}
+                </div>
+              </button>
+
+              {/* Partially Approved Option */}
+              <button
+                type="button"
+                onClick={() => setManualApprovalData({ ...manualApprovalData, status: 'partially_approved', approved_amount: ticket.proposal_amount * 0.8 })}
+                className={`p-4 rounded-lg border-2 text-left transition-all ${
+                  manualApprovalData.status === 'partially_approved'
+                    ? 'border-yellow-500 bg-yellow-50'
+                    : 'border-gray-200 hover:border-yellow-300 bg-white'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <AlertCircle className={`w-6 h-6 ${manualApprovalData.status === 'partially_approved' ? 'text-yellow-600' : 'text-gray-400'}`} />
+                  <div className="flex-1">
+                    <div className={`font-semibold ${manualApprovalData.status === 'partially_approved' ? 'text-yellow-900' : 'text-gray-900'}`}>
+                      Partially Approved
+                    </div>
+                    <div className="text-sm text-gray-600">Custom approved amount</div>
+                  </div>
+                  {manualApprovalData.status === 'partially_approved' && (
+                    <div className="text-sm font-semibold text-yellow-600">Selected</div>
+                  )}
+                </div>
+              </button>
+
+              {/* Denied Option */}
+              <button
+                type="button"
+                onClick={() => setManualApprovalData({ ...manualApprovalData, status: 'denied', approved_amount: 0 })}
+                className={`p-4 rounded-lg border-2 text-left transition-all ${
+                  manualApprovalData.status === 'denied'
+                    ? 'border-red-500 bg-red-50'
+                    : 'border-gray-200 hover:border-red-300 bg-white'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <XCircle className={`w-6 h-6 ${manualApprovalData.status === 'denied' ? 'text-red-600' : 'text-gray-400'}`} />
+                  <div className="flex-1">
+                    <div className={`font-semibold ${manualApprovalData.status === 'denied' ? 'text-red-900' : 'text-gray-900'}`}>
+                      Denied
+                    </div>
+                    <div className="text-sm text-gray-600">Proposal not approved</div>
+                  </div>
+                  {manualApprovalData.status === 'denied' && (
+                    <div className="text-sm font-semibold text-red-600">Selected</div>
+                  )}
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Approved Amount (only for approved/partial) */}
+          {manualApprovalData.status !== 'denied' && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <Input
+                label="Approved Amount"
+                type="number"
+                step="0.01"
+                min="0"
+                value={manualApprovalData.approved_amount}
+                onChange={(e) =>
+                  setManualApprovalData({
+                    ...manualApprovalData,
+                    approved_amount: parseFloat(e.target.value) || 0,
+                  })
+                }
+                helperText={`Original proposal: ${formatCurrency(ticket.proposal_amount)}`}
+              />
+              {manualApprovalData.status === 'partially_approved' && manualApprovalData.approved_amount < ticket.proposal_amount && (
+                <div className="mt-2 text-sm text-yellow-700 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <span>
+                    Difference: {formatCurrency(ticket.proposal_amount - manualApprovalData.approved_amount)} not approved
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          <Input
+            label="Reason for Override"
+            value={manualApprovalData.reason}
+            onChange={(e) =>
+              setManualApprovalData({ ...manualApprovalData, reason: e.target.value })
+            }
+            placeholder="e.g., Approved via phone call"
+            helperText="Brief explanation of why this is being manually overridden"
+          />
+
+          <div>
+            <label className="label">Additional Notes (optional)</label>
+            <textarea
+              className="input-field min-h-[80px]"
+              value={manualApprovalData.notes}
+              onChange={(e) =>
+                setManualApprovalData({ ...manualApprovalData, notes: e.target.value })
+              }
+              placeholder="Any additional context or details..."
+            />
+          </div>
+
+          {/* Enhanced audit warning */}
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+            <div className="flex gap-3">
+              <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-yellow-900 mb-1">Audit Trail</p>
+                <p className="text-sm text-yellow-800">
+                  This override will be permanently logged with your email, timestamp, and reason.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Preview summary */}
+          <div className="bg-gray-50 border border-gray-300 rounded-lg p-4">
+            <div className="text-sm font-semibold text-gray-900 mb-2">Review Changes:</div>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">New Status:</span>
+                <span className={`font-semibold ${
+                  manualApprovalData.status === 'approved' ? 'text-green-600' :
+                  manualApprovalData.status === 'denied' ? 'text-red-600' :
+                  'text-yellow-600'
+                }`}>
+                  {manualApprovalData.status === 'approved' && 'APPROVED'}
+                  {manualApprovalData.status === 'denied' && 'DENIED'}
+                  {manualApprovalData.status === 'partially_approved' && 'PARTIALLY APPROVED'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Approved Amount:</span>
+                <span className="font-semibold text-gray-900">
+                  {formatCurrency(manualApprovalData.approved_amount)}
+                </span>
+              </div>
+              {manualApprovalData.reason && (
+                <div className="pt-2 border-t border-gray-200">
+                  <span className="text-gray-600">Reason: </span>
+                  <span className="text-gray-900">{manualApprovalData.reason}</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </Modal>

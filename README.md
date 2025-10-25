@@ -19,6 +19,7 @@ ChangeOrderino is a full-stack web application for managing Time & Materials (TN
 - **GC Approval Portal** - Secure, no-login approval links for General Contractors
 - **Line-Item Approvals** - GCs can approve/deny individual line items or entire tickets
 - **Automatic Reminders** - Scheduled email reminders until GC responds
+- **Hierarchical Settings** - Configure rates, OH&P, and reminders globally, per-project, or per-change order
 - **Audit Trail** - Complete history of all changes, sends, and approvals
 
 ### Authentication & Security
@@ -121,7 +122,7 @@ AUTH_ENABLED=true
 KEYCLOAK_ADMIN_PASSWORD=your_keycloak_admin_password
 ```
 
-**Labor Rates:**
+**Labor Rates** (configurable in Settings, overridable per project/change order):
 ```bash
 RATE_PROJECT_MANAGER=91
 RATE_SUPERINTENDENT=82
@@ -129,7 +130,7 @@ RATE_CARPENTER=75
 RATE_LABORER=57
 ```
 
-**Default OH&P Percentages:**
+**Default OH&P Percentages** (configurable in Settings, overridable per project/change order):
 ```bash
 DEFAULT_MATERIAL_OHP=15
 DEFAULT_LABOR_OHP=20
@@ -148,6 +149,14 @@ docker compose up -d
 ```bash
 docker compose --profile auth up -d
 ```
+
+**With Cloudflare Tunnel (external access):**
+```bash
+# Requires CLOUDFLARE_TUNNEL_TOKEN in .env
+docker compose --profile auth up -d
+```
+
+See [Cloudflare Tunnel Setup](docs/CLOUDFLARE-TUNNEL-SETUP.md) for configuration details.
 
 ### 4. Access the Application
 
@@ -328,6 +337,45 @@ See `.github/workflows/README.md` for complete documentation.
 
 ---
 
+## 🌐 Public Access with Cloudflare Tunnel
+
+Expose ChangeOrderino to the internet securely without port forwarding or public IP.
+
+### Why Cloudflare Tunnel?
+
+- No open ports or firewall configuration
+- Automatic SSL/TLS certificates
+- DDoS protection included
+- No dynamic DNS needed
+- Built-in Web Application Firewall
+
+### Quick Setup
+
+1. **Create tunnel:**
+   ```bash
+   cloudflared tunnel create changeorderino
+   ```
+
+2. **Configure routes in Cloudflare Zero Trust dashboard:**
+   - `changeorderino.yourdomain.com` → `http://frontend:80`
+   - `auth.yourdomain.com` → `http://keycloak:8080`
+
+3. **Add token to .env:**
+   ```bash
+   CLOUDFLARE_TUNNEL_TOKEN=your_token_here
+   ```
+
+4. **Start services:**
+   ```bash
+   docker compose --profile auth up -d
+   ```
+
+Access your app at `https://changeorderino.yourdomain.com`
+
+See [complete setup guide](docs/CLOUDFLARE-TUNNEL-SETUP.md) for detailed instructions.
+
+---
+
 ## 📊 API Endpoints
 
 ### Projects
@@ -422,6 +470,40 @@ Located in `/services/email-service/templates/`:
 - `rfco_send.html` - Initial RFCO email to GC
 - `reminder.html` - Reminder email template
 - `approval_confirmation.html` - Confirmation email to TRE
+
+---
+
+## ⚙️ Settings Configuration
+
+Settings can be configured at multiple levels with a cascading hierarchy:
+
+**Global Settings** → **Project Settings** → **Change Order Settings**
+
+### Configurable Settings
+
+Most settings in `.env` can be configured through the application UI:
+- Company information (name, email, phone, timezone)
+- SMTP configuration (host, port, username - password stays in .env)
+- Labor rates (PM, Superintendent, Carpenter, Laborer)
+- OH&P percentages (Material, Labor, Equipment, Subcontractor)
+- Reminder settings (enabled, interval, max retries)
+- Approval token expiration
+
+### Hierarchy Example
+
+**Scenario:** Different labor rates for a union project
+
+1. **Global:** Standard rate of $75/hr for carpenters (applies everywhere)
+2. **Project Override:** Union project sets $85/hr (applies to all change orders in this project)
+3. **Change Order Override:** Emergency work sets $95/hr (applies only to this specific change order)
+
+When creating a change order, the app automatically uses the most specific setting available. This lets you set defaults once and override them only when needed.
+
+### Implementation Status
+
+Settings hierarchy is documented and planned for future implementation. Currently, all settings are loaded from `.env` on startup.
+
+See [Settings Configuration Guide](docs/SETTINGS-CONFIGURATION.md) for complete implementation details.
 
 ---
 
@@ -557,7 +639,9 @@ ChangeOrderino/
 │   └── init-multiple-databases.sh
 │
 ├── docs/                        # Documentation
-│   └── CI-CD-SETUP.md          # CI/CD details
+│   ├── CLOUDFLARE-TUNNEL-SETUP.md          # Cloudflare Tunnel user guide
+│   ├── CLOUDFLARE-TUNNEL-IMPLEMENTATION.md # Tunnel technical details
+│   └── SETTINGS-CONFIGURATION.md           # Settings hierarchy guide
 │
 ├── docker-compose.yml            # Service orchestration
 ├── .env.example                  # Environment template

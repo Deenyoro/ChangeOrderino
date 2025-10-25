@@ -8,7 +8,8 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
-from app.core.database import init_db, close_db
+from app.core.database import init_db, close_db, AsyncSessionLocal
+from app.core.settings_init import initialize_settings_from_env
 from app.api.v1 import (
     projects,
     tnm_tickets,
@@ -19,6 +20,7 @@ from app.api.v1 import (
     dashboard,
     line_items,
     email_health,
+    settings as settings_router,
 )
 
 
@@ -33,6 +35,10 @@ async def lifespan(app: FastAPI):
     # Initialize database
     await init_db()
     print("✅ Database initialized")
+
+    # Initialize settings from .env (first run only)
+    async with AsyncSessionLocal() as db:
+        await initialize_settings_from_env(db)
 
     # Check email service configuration
     print(f"📧 Email Service: {'Enabled' if settings.SMTP_ENABLED else 'Disabled'}")
@@ -90,6 +96,7 @@ app.include_router(assets.router, prefix="/v1/assets", tags=["Assets"])
 app.include_router(audit.router, prefix="/v1/audit", tags=["Audit Logs"])
 app.include_router(dashboard.router, prefix="/v1/dashboard", tags=["Dashboard"])
 app.include_router(email_health.router, prefix="/v1", tags=["Email Service"])
+app.include_router(settings_router.router, prefix="/v1", tags=["Settings"])
 
 
 # ============ ERROR HANDLERS ============

@@ -49,21 +49,29 @@ class TNMTicket(Base):
     # Status
     status = Column(SQLEnum(TNMStatus), nullable=False, default=TNMStatus.DRAFT, index=True)
 
+    # OH&P override percentages (nullable = use project/global defaults if NULL)
+    material_ohp_percent = Column(Numeric(5, 2), nullable=True)
+    labor_ohp_percent = Column(Numeric(5, 2), nullable=True)
+    equipment_ohp_percent = Column(Numeric(5, 2), nullable=True)
+    subcontractor_ohp_percent = Column(Numeric(5, 2), nullable=True)
+
+    # Labor rate overrides (nullable = use project/global defaults if NULL)
+    rate_project_manager = Column(Numeric(8, 2), nullable=True)
+    rate_superintendent = Column(Numeric(8, 2), nullable=True)
+    rate_carpenter = Column(Numeric(8, 2), nullable=True)
+    rate_laborer = Column(Numeric(8, 2), nullable=True)
+
     # Calculated totals
     labor_subtotal = Column(Numeric(12, 2), default=0.00)
-    labor_ohp_percent = Column(Numeric(5, 2), default=20.00)
     labor_total = Column(Numeric(12, 2), default=0.00)
 
     material_subtotal = Column(Numeric(12, 2), default=0.00)
-    material_ohp_percent = Column(Numeric(5, 2), default=15.00)
     material_total = Column(Numeric(12, 2), default=0.00)
 
     equipment_subtotal = Column(Numeric(12, 2), default=0.00)
-    equipment_ohp_percent = Column(Numeric(5, 2), default=10.00)
     equipment_total = Column(Numeric(12, 2), default=0.00)
 
     subcontractor_subtotal = Column(Numeric(12, 2), default=0.00)
-    subcontractor_ohp_percent = Column(Numeric(5, 2), default=5.00)
     subcontractor_total = Column(Numeric(12, 2), default=0.00)
 
     proposal_amount = Column(Numeric(12, 2), default=0.00)

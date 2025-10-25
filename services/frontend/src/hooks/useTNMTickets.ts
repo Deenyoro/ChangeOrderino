@@ -113,3 +113,46 @@ export const useDeleteTNMTicket = () => {
     },
   });
 };
+
+export const useSendReminder = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => tnmTicketsApi.sendReminder(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['tnm-tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['tnm-ticket', id] });
+      toast.success('Reminder sent successfully');
+    },
+    onError: () => {
+      toast.error('Failed to send reminder');
+    },
+  });
+};
+
+export const useManualApprovalOverride = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: {
+        status: 'approved' | 'denied' | 'partially_approved';
+        approved_amount?: number;
+        reason?: string;
+        notes?: string;
+      };
+    }) => tnmTicketsApi.manualApprovalOverride(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['tnm-tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['tnm-ticket', variables.id] });
+      toast.success('Approval status updated successfully');
+    },
+    onError: () => {
+      toast.error('Failed to update approval status');
+    },
+  });
+};

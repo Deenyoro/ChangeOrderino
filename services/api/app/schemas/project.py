@@ -17,12 +17,20 @@ class ProjectBase(BaseModel):
     gc_phone: Optional[str] = None
     project_manager_id: Optional[UUID] = None
     project_manager_name: Optional[str] = None
-    material_ohp_percent: Decimal = Field(default=15.00, ge=0, le=100)
-    labor_ohp_percent: Decimal = Field(default=20.00, ge=0, le=100)
-    equipment_ohp_percent: Decimal = Field(default=10.00, ge=0, le=100)
-    subcontractor_ohp_percent: Decimal = Field(default=5.00, ge=0, le=100)
-    reminder_interval_days: int = Field(default=7, ge=1)
-    reminder_max_retries: int = Field(default=4, ge=0)
+
+    # Settings overrides (nullable = use global defaults)
+    material_ohp_percent: Optional[Decimal] = Field(None, ge=0, le=100)
+    labor_ohp_percent: Optional[Decimal] = Field(None, ge=0, le=100)
+    equipment_ohp_percent: Optional[Decimal] = Field(None, ge=0, le=100)
+    subcontractor_ohp_percent: Optional[Decimal] = Field(None, ge=0, le=100)
+    rate_project_manager: Optional[Decimal] = Field(None, ge=0)
+    rate_superintendent: Optional[Decimal] = Field(None, ge=0)
+    rate_carpenter: Optional[Decimal] = Field(None, ge=0)
+    rate_laborer: Optional[Decimal] = Field(None, ge=0)
+    reminder_interval_days: Optional[int] = Field(None, ge=1, le=30)
+    reminder_max_retries: Optional[int] = Field(None, ge=0, le=10)
+    approval_token_expiration_hours: Optional[int] = Field(None, ge=1, le=720)
+
     is_active: bool = True
     notes: Optional[str] = None
 
@@ -43,12 +51,20 @@ class ProjectUpdate(BaseModel):
     gc_phone: Optional[str] = None
     project_manager_id: Optional[UUID] = None
     project_manager_name: Optional[str] = None
+
+    # Settings overrides
     material_ohp_percent: Optional[Decimal] = Field(None, ge=0, le=100)
     labor_ohp_percent: Optional[Decimal] = Field(None, ge=0, le=100)
     equipment_ohp_percent: Optional[Decimal] = Field(None, ge=0, le=100)
     subcontractor_ohp_percent: Optional[Decimal] = Field(None, ge=0, le=100)
-    reminder_interval_days: Optional[int] = Field(None, ge=1)
-    reminder_max_retries: Optional[int] = Field(None, ge=0)
+    rate_project_manager: Optional[Decimal] = Field(None, ge=0)
+    rate_superintendent: Optional[Decimal] = Field(None, ge=0)
+    rate_carpenter: Optional[Decimal] = Field(None, ge=0)
+    rate_laborer: Optional[Decimal] = Field(None, ge=0)
+    reminder_interval_days: Optional[int] = Field(None, ge=1, le=30)
+    reminder_max_retries: Optional[int] = Field(None, ge=0, le=10)
+    approval_token_expiration_hours: Optional[int] = Field(None, ge=1, le=720)
+
     is_active: Optional[bool] = None
     notes: Optional[str] = None
 

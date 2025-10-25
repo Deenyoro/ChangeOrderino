@@ -1,14 +1,15 @@
 /**
  * GC Approval Page - Public (no auth), accessed via email link with token
+ * Enhanced with prominent buttons, 44px touch targets, and mobile-optimized layout
  */
 
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { CheckCircle, XCircle, FileText, Clock } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { CheckCircle, XCircle, FileText, Clock, MessageSquare, ThumbsUp } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { approvalsApi } from '../api/approvals';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
-import { Button } from '../components/common/Button';
 import { formatDate, formatCurrency } from '../utils/formatters';
 import { TNMSummary } from '../components/tnm/TNMSummary';
 import { ApprovalStatus } from '../types/tnmTicket';
@@ -101,6 +102,16 @@ export const GCApprovalPage: React.FC = () => {
   };
 
   const handleSubmit = async () => {
+    // Validate: at least one item must be approved or denied (not pending)
+    const hasDecisions = lineItemApprovals.some(
+      item => item.status === ApprovalStatus.APPROVED || item.status === ApprovalStatus.DENIED
+    );
+
+    if (!hasDecisions) {
+      toast.error('Please approve or deny at least one line item before submitting');
+      return;
+    }
+
     await submitMutation.mutateAsync({
       line_item_approvals: lineItemApprovals,
       gc_comment: gcComment,
@@ -149,15 +160,20 @@ export const GCApprovalPage: React.FC = () => {
 
   if (data.already_responded || submitted) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="card max-w-md text-center">
-          <div className="text-green-600 mb-4">
-            <CheckCircle className="w-16 h-16 mx-auto" />
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
+        <div className="card max-w-md text-center animate-fade-in">
+          <div className="text-green-600 mb-6 animate-scale-in">
+            <CheckCircle className="w-24 h-24 mx-auto drop-shadow-lg" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Response Submitted</h2>
-          <p className="text-gray-600">
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">Response Submitted!</h2>
+          <p className="text-lg text-gray-700 mb-6">
             Thank you! Your response has been recorded and the project team has been notified.
           </p>
+          <div className="bg-green-50 border-l-4 border-green-600 p-4 rounded-r-lg">
+            <p className="text-sm text-green-800">
+              You will receive a confirmation email shortly.
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -167,22 +183,26 @@ export const GCApprovalPage: React.FC = () => {
   const project = data.project;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-                Change Order Approval Request
-              </h1>
-              <p className="mt-1 text-sm text-gray-600">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+      {/* Header - Enhanced with gradient and better visual hierarchy */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 border-b-4 border-blue-800 shadow-xl">
+        <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <FileText className="w-8 h-8 text-blue-100" />
+                <h1 className="text-3xl md:text-4xl font-bold text-white">
+                  Change Order Approval
+                </h1>
+              </div>
+              <p className="text-base text-blue-100">
                 From: {project?.customer_company || 'TRE Construction'}
               </p>
             </div>
-            <div className="text-right">
-              <div className="text-sm text-gray-600">RFCO #{ticket.tnm_number}</div>
-              <div className="text-sm text-gray-600">{formatDate(ticket.proposal_date)}</div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg px-6 py-4 border border-white/20">
+              <div className="text-xs uppercase tracking-wider text-blue-200 mb-1">RFCO Number</div>
+              <div className="text-2xl font-bold text-white">#{ticket.tnm_number}</div>
+              <div className="text-sm text-blue-100 mt-2">{formatDate(ticket.proposal_date)}</div>
             </div>
           </div>
         </div>
@@ -260,7 +280,7 @@ export const GCApprovalPage: React.FC = () => {
                           <td className="px-3 py-2 text-sm text-gray-900">{formatCurrency(item.rate_per_hour)}</td>
                           <td className="px-3 py-2 text-sm font-semibold text-gray-900 text-right">{formatCurrency(item.subtotal)}</td>
                           <td className="px-3 py-2">
-                            <div className="flex items-center justify-center gap-2">
+                            <div className="flex items-center justify-center gap-3">
                               <button
                                 type="button"
                                 onClick={() => {
@@ -270,13 +290,14 @@ export const GCApprovalPage: React.FC = () => {
                                     )
                                   );
                                 }}
-                                className={`px-3 py-1 rounded text-sm font-medium min-h-[36px] min-w-[36px] ${
+                                className={`rounded-lg font-semibold transition-all duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center ${
                                   approval?.status === ApprovalStatus.APPROVED
-                                    ? 'bg-green-600 text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-green-100'
+                                    ? 'bg-green-600 text-white shadow-lg scale-110'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-green-100 hover:scale-105 hover:shadow-md'
                                 }`}
+                                title="Approve this item"
                               >
-                                <CheckCircle className="w-4 h-4 inline" />
+                                <CheckCircle className="w-6 h-6" />
                               </button>
                               <button
                                 type="button"
@@ -287,13 +308,14 @@ export const GCApprovalPage: React.FC = () => {
                                     )
                                   );
                                 }}
-                                className={`px-3 py-1 rounded text-sm font-medium min-h-[36px] min-w-[36px] ${
+                                className={`rounded-lg font-semibold transition-all duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center ${
                                   approval?.status === ApprovalStatus.DENIED
-                                    ? 'bg-red-600 text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-red-100'
+                                    ? 'bg-red-600 text-white shadow-lg scale-110'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-red-100 hover:scale-105 hover:shadow-md'
                                 }`}
+                                title="Deny this item"
                               >
-                                <XCircle className="w-4 h-4 inline" />
+                                <XCircle className="w-6 h-6" />
                               </button>
                             </div>
                           </td>
@@ -331,7 +353,7 @@ export const GCApprovalPage: React.FC = () => {
                           <td className="px-3 py-2 text-sm text-gray-900">{formatCurrency(item.unit_price)}</td>
                           <td className="px-3 py-2 text-sm font-semibold text-gray-900 text-right">{formatCurrency(item.subtotal)}</td>
                           <td className="px-3 py-2">
-                            <div className="flex items-center justify-center gap-2">
+                            <div className="flex items-center justify-center gap-3">
                               <button
                                 type="button"
                                 onClick={() => {
@@ -341,13 +363,14 @@ export const GCApprovalPage: React.FC = () => {
                                     )
                                   );
                                 }}
-                                className={`px-3 py-1 rounded text-sm font-medium min-h-[36px] min-w-[36px] ${
+                                className={`rounded-lg font-semibold transition-all duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center ${
                                   approval?.status === ApprovalStatus.APPROVED
-                                    ? 'bg-green-600 text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-green-100'
+                                    ? 'bg-green-600 text-white shadow-lg scale-110'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-green-100 hover:scale-105 hover:shadow-md'
                                 }`}
+                                title="Approve this item"
                               >
-                                <CheckCircle className="w-4 h-4 inline" />
+                                <CheckCircle className="w-6 h-6" />
                               </button>
                               <button
                                 type="button"
@@ -358,13 +381,14 @@ export const GCApprovalPage: React.FC = () => {
                                     )
                                   );
                                 }}
-                                className={`px-3 py-1 rounded text-sm font-medium min-h-[36px] min-w-[36px] ${
+                                className={`rounded-lg font-semibold transition-all duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center ${
                                   approval?.status === ApprovalStatus.DENIED
-                                    ? 'bg-red-600 text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-red-100'
+                                    ? 'bg-red-600 text-white shadow-lg scale-110'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-red-100 hover:scale-105 hover:shadow-md'
                                 }`}
+                                title="Deny this item"
                               >
-                                <XCircle className="w-4 h-4 inline" />
+                                <XCircle className="w-6 h-6" />
                               </button>
                             </div>
                           </td>
@@ -402,7 +426,7 @@ export const GCApprovalPage: React.FC = () => {
                           <td className="px-3 py-2 text-sm text-gray-900">{formatCurrency(item.unit_price)}</td>
                           <td className="px-3 py-2 text-sm font-semibold text-gray-900 text-right">{formatCurrency(item.subtotal)}</td>
                           <td className="px-3 py-2">
-                            <div className="flex items-center justify-center gap-2">
+                            <div className="flex items-center justify-center gap-3">
                               <button
                                 type="button"
                                 onClick={() => {
@@ -412,13 +436,14 @@ export const GCApprovalPage: React.FC = () => {
                                     )
                                   );
                                 }}
-                                className={`px-3 py-1 rounded text-sm font-medium min-h-[36px] min-w-[36px] ${
+                                className={`rounded-lg font-semibold transition-all duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center ${
                                   approval?.status === ApprovalStatus.APPROVED
-                                    ? 'bg-green-600 text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-green-100'
+                                    ? 'bg-green-600 text-white shadow-lg scale-110'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-green-100 hover:scale-105 hover:shadow-md'
                                 }`}
+                                title="Approve this item"
                               >
-                                <CheckCircle className="w-4 h-4 inline" />
+                                <CheckCircle className="w-6 h-6" />
                               </button>
                               <button
                                 type="button"
@@ -429,13 +454,14 @@ export const GCApprovalPage: React.FC = () => {
                                     )
                                   );
                                 }}
-                                className={`px-3 py-1 rounded text-sm font-medium min-h-[36px] min-w-[36px] ${
+                                className={`rounded-lg font-semibold transition-all duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center ${
                                   approval?.status === ApprovalStatus.DENIED
-                                    ? 'bg-red-600 text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-red-100'
+                                    ? 'bg-red-600 text-white shadow-lg scale-110'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-red-100 hover:scale-105 hover:shadow-md'
                                 }`}
+                                title="Deny this item"
                               >
-                                <XCircle className="w-4 h-4 inline" />
+                                <XCircle className="w-6 h-6" />
                               </button>
                             </div>
                           </td>
@@ -471,7 +497,7 @@ export const GCApprovalPage: React.FC = () => {
                           <td className="px-3 py-2 text-sm text-gray-900">{item.proposal_date || '-'}</td>
                           <td className="px-3 py-2 text-sm font-semibold text-gray-900 text-right">{formatCurrency(item.amount)}</td>
                           <td className="px-3 py-2">
-                            <div className="flex items-center justify-center gap-2">
+                            <div className="flex items-center justify-center gap-3">
                               <button
                                 type="button"
                                 onClick={() => {
@@ -481,13 +507,14 @@ export const GCApprovalPage: React.FC = () => {
                                     )
                                   );
                                 }}
-                                className={`px-3 py-1 rounded text-sm font-medium min-h-[36px] min-w-[36px] ${
+                                className={`rounded-lg font-semibold transition-all duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center ${
                                   approval?.status === ApprovalStatus.APPROVED
-                                    ? 'bg-green-600 text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-green-100'
+                                    ? 'bg-green-600 text-white shadow-lg scale-110'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-green-100 hover:scale-105 hover:shadow-md'
                                 }`}
+                                title="Approve this item"
                               >
-                                <CheckCircle className="w-4 h-4 inline" />
+                                <CheckCircle className="w-6 h-6" />
                               </button>
                               <button
                                 type="button"
@@ -498,13 +525,14 @@ export const GCApprovalPage: React.FC = () => {
                                     )
                                   );
                                 }}
-                                className={`px-3 py-1 rounded text-sm font-medium min-h-[36px] min-w-[36px] ${
+                                className={`rounded-lg font-semibold transition-all duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center ${
                                   approval?.status === ApprovalStatus.DENIED
-                                    ? 'bg-red-600 text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-red-100'
+                                    ? 'bg-red-600 text-white shadow-lg scale-110'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-red-100 hover:scale-105 hover:shadow-md'
                                 }`}
+                                title="Deny this item"
                               >
-                                <XCircle className="w-4 h-4 inline" />
+                                <XCircle className="w-6 h-6" />
                               </button>
                             </div>
                           </td>
@@ -532,49 +560,95 @@ export const GCApprovalPage: React.FC = () => {
           />
         </div>
 
-        {/* Approval Actions */}
+        {/* Approval Actions - Enhanced with prominent buttons */}
         <div className="card">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Response</h3>
+          <h3 className="text-2xl font-bold text-gray-900 mb-6">Your Response</h3>
 
-          <div className="space-y-6">
-            {/* Quick Actions */}
-            <div>
-              <p className="text-sm text-gray-600 mb-3">
-                Review each line item above and use the approve/deny buttons next to each item, or use the quick actions below to approve/deny all at once.
+          <div className="space-y-8">
+            {/* Quick Actions - Large, Prominent Buttons */}
+            <div className="bg-gradient-to-r from-blue-50 to-green-50 border-2 border-blue-200 rounded-xl p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <ThumbsUp className="w-6 h-6 text-blue-600" />
+                <h4 className="text-lg font-semibold text-gray-900">Quick Actions</h4>
+              </div>
+              <p className="text-sm text-gray-700 mb-6">
+                Review each line item above individually, or use these quick actions to approve/deny everything at once.
               </p>
-              <div className="flex flex-wrap gap-3">
-                <Button onClick={handleApproveAll}>
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Approve All Line Items
-                </Button>
-                <Button variant="danger" onClick={handleDenyAll}>
-                  <XCircle className="w-4 h-4 mr-2" />
-                  Deny All Line Items
-                </Button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Approve All - Large Prominent Button */}
+                <button
+                  type="button"
+                  onClick={handleApproveAll}
+                  className="group relative overflow-hidden bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 min-h-[80px]"
+                >
+                  <div className="relative z-10 flex items-center justify-center gap-3">
+                    <CheckCircle className="w-8 h-8 animate-pulse" />
+                    <div className="text-left">
+                      <div className="text-xl font-bold">Approve All</div>
+                      <div className="text-sm text-green-100">Accept all line items</div>
+                    </div>
+                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-green-500 opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+                </button>
+
+                {/* Deny All - Large Prominent Button */}
+                <button
+                  type="button"
+                  onClick={handleDenyAll}
+                  className="group relative overflow-hidden bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 min-h-[80px]"
+                >
+                  <div className="relative z-10 flex items-center justify-center gap-3">
+                    <XCircle className="w-8 h-8 animate-pulse" />
+                    <div className="text-left">
+                      <div className="text-xl font-bold">Deny All</div>
+                      <div className="text-sm text-red-100">Reject all line items</div>
+                    </div>
+                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-red-400 to-red-500 opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+                </button>
               </div>
             </div>
 
             {/* Comment */}
             <div>
-              <label className="label">Comments (optional)</label>
+              <label className="flex items-center gap-2 text-base font-semibold text-gray-900 mb-3">
+                <MessageSquare className="w-5 h-5 text-blue-600" />
+                Comments (optional)
+              </label>
               <textarea
-                className="input-field min-h-[100px]"
-                placeholder="Add any comments or conditions for approval..."
+                className="input-field min-h-[120px] text-base"
+                placeholder="Add any comments, conditions, or questions about this change order..."
                 value={gcComment}
                 onChange={(e) => setGcComment(e.target.value)}
               />
+              <p className="text-xs text-gray-500 mt-2">
+                Your comments will be shared with the project team
+              </p>
             </div>
 
-            {/* Submit */}
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
-              <Button
+            {/* Submit - Large Prominent Button */}
+            <div className="flex items-center justify-end gap-3 pt-6 border-t-2 border-gray-200">
+              <button
+                type="button"
                 onClick={handleSubmit}
-                size="lg"
-                isLoading={submitMutation.isPending}
+                disabled={submitMutation.isPending}
+                className="group relative overflow-hidden bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-xl px-10 py-5 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed min-h-[64px]"
               >
-                <FileText className="w-5 h-5 mr-2" />
-                Submit Response
-              </Button>
+                <div className="relative z-10 flex items-center justify-center gap-3">
+                  <FileText className={`w-6 h-6 ${submitMutation.isPending ? 'animate-pulse' : ''}`} />
+                  <div className="text-left">
+                    <div className="text-xl font-bold">
+                      {submitMutation.isPending ? 'Submitting...' : 'Submit Response'}
+                    </div>
+                    <div className="text-sm text-blue-100">
+                      {submitMutation.isPending ? 'Please wait' : 'Send your decision'}
+                    </div>
+                  </div>
+                </div>
+                {!submitMutation.isPending && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-blue-500 opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+                )}
+              </button>
             </div>
           </div>
         </div>

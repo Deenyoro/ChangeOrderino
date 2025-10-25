@@ -19,7 +19,14 @@ from app.models.material_item import MaterialItem
 from app.models.equipment_item import EquipmentItem
 from app.models.subcontractor_item import SubcontractorItem
 from app.models.email_log import EmailLog
-from app.schemas.tnm_ticket import TNMTicketCreate, TNMTicketUpdate, TNMTicketResponse, SendRFCORequest, SendRFCOResponse
+from app.schemas.tnm_ticket import (
+    TNMTicketCreate,
+    TNMTicketUpdate,
+    TNMTicketResponse,
+    SendRFCORequest,
+    SendRFCOResponse,
+    ManualApprovalRequest,
+)
 from app.services.pdf_generator import pdf_generator
 from app.services.queue_service import queue_service
 from app.services.audit_service import audit_service
@@ -488,3 +495,205 @@ async def send_rfco(
         sent_at=ticket.last_email_sent_at,
         email_log_id=str(email_log.id),
     )
+
+
+@router.post("/{ticket_id}/remind", response_model=SendRFCOResponse)
+async def send_reminder(
+    ticket_id: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user),
+):
+    """
+    Send reminder email for RFCO
+
+    Manually trigger a reminder email to the GC.
+    Can be used at any time after initial send.
+    """
+    # Fetch ticket
+    result = await db.execute(
+        select(TNMTicket)
+        .where(TNMTicket.id == ticket_id)
+        .options(selectinload(TNMTicket.project))
+    )
+    ticket = result.scalar_one_or_none()
+
+    if not ticket:
+        raise HTTPException(status_code=404, detail="TNM ticket not found")
+
+    # Verify ticket has been sent at least once
+    if ticket.status not in [TNMStatus.SENT, TNMStatus.VIEWED, TNMStatus.PARTIALLY_APPROVED]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot send reminder for ticket with status '{ticket.status.value}'. Must be sent first."
+        )
+
+    # Verify we have approval token
+    if not ticket.approval_token:
+        raise HTTPException(
+            status_code=400,
+            detail="No approval token found. Please send the RFCO first."
+        )
+
+    # Get GC email from project
+    if not ticket.project or not ticket.project.gc_email:
+        raise HTTPException(
+            status_code=400,
+            detail="No GC email on file. Please update project settings."
+        )
+
+    # Update reminder tracking
+    ticket.reminder_count += 1
+    ticket.last_reminder_sent_at = datetime.utcnow()
+
+    # Create email log entry
+    email_log = EmailLog(
+        tnm_ticket_id=ticket_id,
+        to_email=ticket.project.gc_email,
+        from_email=settings.SMTP_FROM_EMAIL,
+        subject=f"REMINDER: RFCO {ticket.tnm_number} - {ticket.project.name}",
+        body_text=f"Reminder: Request for Change Order: {ticket.title}",
+        email_type='reminder',
+        status='queued',
+    )
+    db.add(email_log)
+
+    # Log reminder action
+    await audit_service.log(
+        db=db,
+        entity_type='tnm_ticket',
+        entity_id=ticket_id,
+        action='send_reminder',
+        user_id=UUID(current_user.sub),
+        changes={
+            'reminder_count': {'old': str(ticket.reminder_count - 1), 'new': str(ticket.reminder_count)},
+            'sent_to': ticket.project.gc_email,
+        },
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get('user-agent'),
+    )
+
+    # Commit before queuing
+    await db.commit()
+    await db.refresh(ticket)
+
+    # Queue reminder email
+    job_id = queue_service.enqueue_rfco_email(
+        tnm_ticket_id=str(ticket_id),
+        to_email=ticket.project.gc_email,
+        approval_token=ticket.approval_token,
+        retry_count=ticket.reminder_count
+    )
+
+    if not job_id:
+        logger.error(f"Failed to enqueue reminder email for ticket {ticket_id}")
+    else:
+        logger.info(f"Successfully enqueued reminder email job {job_id} for ticket {ticket.tnm_number}")
+
+    # Build approval link
+    approval_link = f"https://changeorderino.com/approval/{ticket.approval_token}"
+
+    return SendRFCOResponse(
+        success=True,
+        tnm_ticket_id=str(ticket_id),
+        tnm_number=ticket.tnm_number,
+        status=ticket.status.value,
+        approval_token=ticket.approval_token,
+        approval_link=approval_link,
+        sent_at=ticket.last_reminder_sent_at,
+        email_log_id=str(email_log.id),
+    )
+
+
+@router.patch("/{ticket_id}/manual-approval")
+async def manual_approval_override(
+    ticket_id: UUID,
+    approval_data: ManualApprovalRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user),
+):
+    """
+    Manually override approval status
+
+    Allows admin to force approve/deny a ticket based on
+    offline communication (phone, email, etc.)
+    """
+    # Fetch ticket
+    result = await db.execute(
+        select(TNMTicket).where(TNMTicket.id == ticket_id)
+    )
+    ticket = result.scalar_one_or_none()
+
+    if not ticket:
+        raise HTTPException(status_code=404, detail="TNM ticket not found")
+
+    # Store old status
+    old_status = ticket.status
+
+    # Update status
+    if approval_data.status == 'approved':
+        ticket.status = TNMStatus.APPROVED
+        ticket.approved_amount = approval_data.approved_amount or ticket.proposal_amount
+    elif approval_data.status == 'denied':
+        ticket.status = TNMStatus.DENIED
+        ticket.approved_amount = 0
+    elif approval_data.status == 'partially_approved':
+        ticket.status = TNMStatus.PARTIALLY_APPROVED
+        if approval_data.approved_amount is None:
+            raise HTTPException(
+                status_code=400,
+                detail="approved_amount is required for partial approval"
+            )
+        ticket.approved_amount = approval_data.approved_amount
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid status: {approval_data.status}"
+        )
+
+    # Update response date if not already set
+    if not ticket.response_date:
+        ticket.response_date = datetime.utcnow().date()
+
+    # Update notes
+    if approval_data.notes:
+        if ticket.notes:
+            ticket.notes += f"\n\n[Manual Override by {current_user.email}]: {approval_data.notes}"
+        else:
+            ticket.notes = f"[Manual Override by {current_user.email}]: {approval_data.notes}"
+
+    # Log manual override
+    await audit_service.log(
+        db=db,
+        entity_type='tnm_ticket',
+        entity_id=ticket_id,
+        action='manual_approval_override',
+        user_id=UUID(current_user.sub),
+        changes={
+            'status': {'old': old_status.value, 'new': ticket.status.value},
+            'approved_amount': {'old': '0', 'new': str(ticket.approved_amount)},
+            'override_reason': approval_data.reason or 'No reason provided',
+            'notes': approval_data.notes or '',
+        },
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get('user-agent'),
+    )
+
+    await db.commit()
+    await db.refresh(ticket)
+
+    logger.info(
+        f"Manual approval override for ticket {ticket.tnm_number}: "
+        f"{old_status.value} → {ticket.status.value} by {current_user.email}"
+    )
+
+    return {
+        "success": True,
+        "ticket_id": str(ticket_id),
+        "tnm_number": ticket.tnm_number,
+        "old_status": old_status.value,
+        "new_status": ticket.status.value,
+        "approved_amount": float(ticket.approved_amount),
+        "response_date": ticket.response_date.isoformat() if ticket.response_date else None,
+    }

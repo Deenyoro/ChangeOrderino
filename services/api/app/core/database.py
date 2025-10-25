@@ -61,6 +61,7 @@ async def init_db():
             email_log,
             audit_log,
             asset,
+            app_settings,
         )
 
         # Create all tables

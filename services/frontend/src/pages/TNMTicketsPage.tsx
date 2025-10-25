@@ -10,7 +10,7 @@ import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
-import { formatDate, formatCurrency } from '../utils/formatters';
+import { formatDate, formatCurrency, formatDateTime } from '../utils/formatters';
 import { TNMStatus } from '../types/tnmTicket';
 
 export const TNMTicketsPage: React.FC = () => {
@@ -101,6 +101,12 @@ export const TNMTicketsPage: React.FC = () => {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Response Date
                 </th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Reminders
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Last Reminder
+                </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
@@ -143,6 +149,26 @@ export const TNMTicketsPage: React.FC = () => {
                   <td className="px-4 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-500">
                       {ticket.response_date ? formatDate(ticket.response_date) : '—'}
+                    </div>
+                  </td>
+                  <td className="px-4 py-4 whitespace-nowrap text-center">
+                    {ticket.reminder_count > 0 ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        {ticket.reminder_count}
+                      </span>
+                    ) : (
+                      <span className="text-sm text-gray-400">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-500">
+                      {ticket.last_reminder_sent_at ? (
+                        <span title={formatDateTime(ticket.last_reminder_sent_at)}>
+                          {formatDate(ticket.last_reminder_sent_at)}
+                        </span>
+                      ) : (
+                        '—'
+                      )}
                     </div>
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap">

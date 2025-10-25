@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { ArrowLeft, Camera, FileText, Save } from 'lucide-react';
+import { ArrowLeft, Camera, FileText } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { useProjects } from '../hooks/useProjects';
 import { useCreateTNMTicket } from '../hooks/useTNMTickets';
@@ -17,11 +17,18 @@ import { LaborItemTable } from '../components/tnm/LaborItemTable';
 import { MaterialItemTable } from '../components/tnm/MaterialItemTable';
 import { EquipmentItemTable } from '../components/tnm/EquipmentItemTable';
 import { SubcontractorItemTable } from '../components/tnm/SubcontractorItemTable';
-import { TNMSummary } from '../components/tnm/TNMSummary';
+import { StickySummaryBar } from '../components/tnm/StickySummaryBar';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { TNMTicketFormData } from '../types/tnmTicket';
 import { LaborItem, MaterialItem, EquipmentItem, SubcontractorItem } from '../types/lineItem';
 import { formatDateForInput } from '../utils/formatters';
+import {
+  calculateLaborTotal,
+  calculateMaterialTotal,
+  calculateEquipmentTotal,
+  calculateSubcontractorTotal,
+  calculateTotalWithOHP,
+} from '../utils/calculations';
 
 export const CreateTNMPage: React.FC = () => {
   const navigate = useNavigate();
@@ -69,6 +76,24 @@ export const CreateTNMPage: React.FC = () => {
   const watchedProjectId = watch('project_id');
   const project = projects?.find(p => p.id === watchedProjectId);
 
+  // Calculate real-time totals for sticky summary bar
+  const laborSubtotal = calculateLaborTotal(laborItems);
+  const materialSubtotal = calculateMaterialTotal(materialItems);
+  const equipmentSubtotal = calculateEquipmentTotal(equipmentItems);
+  const subcontractorSubtotal = calculateSubcontractorTotal(subcontractorItems);
+
+  const laborOHP = project?.labor_ohp_percent || 20;
+  const materialOHP = project?.material_ohp_percent || 15;
+  const equipmentOHP = project?.equipment_ohp_percent || 10;
+  const subcontractorOHP = project?.subcontractor_ohp_percent || 5;
+
+  const laborTotal = calculateTotalWithOHP(laborSubtotal, laborOHP);
+  const materialTotal = calculateTotalWithOHP(materialSubtotal, materialOHP);
+  const equipmentTotal = calculateTotalWithOHP(equipmentSubtotal, equipmentOHP);
+  const subcontractorTotal = calculateTotalWithOHP(subcontractorSubtotal, subcontractorOHP);
+
+  const proposalAmount = laborTotal + materialTotal + equipmentTotal + subcontractorTotal;
+
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
@@ -111,7 +136,7 @@ export const CreateTNMPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="max-w-7xl mx-auto pb-48">
       {/* Header */}
       <div className="mb-6">
         <Link
@@ -129,8 +154,8 @@ export const CreateTNMPage: React.FC = () => {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Ticket Header */}
-        <div className="card">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Ticket Information</h3>
+        <div className="card-section">
+          <h3 className="card-section-title">Ticket Information</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Controller
               name="project_id"
@@ -197,26 +222,26 @@ export const CreateTNMPage: React.FC = () => {
 
         {/* Line Items */}
         <div className="space-y-6">
-          <div className="card">
+          <div className="card-section">
             <LaborItemTable items={laborItems} onChange={setLaborItems} />
           </div>
 
-          <div className="card">
+          <div className="card-section">
             <MaterialItemTable items={materialItems} onChange={setMaterialItems} />
           </div>
 
-          <div className="card">
+          <div className="card-section">
             <EquipmentItemTable items={equipmentItems} onChange={setEquipmentItems} />
           </div>
 
-          <div className="card">
+          <div className="card-section">
             <SubcontractorItemTable items={subcontractorItems} onChange={setSubcontractorItems} />
           </div>
         </div>
 
         {/* Signature & Photos */}
-        <div className="card">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Signature & Documentation</h3>
+        <div className="card-section">
+          <h3 className="card-section-title">Signature & Documentation</h3>
           <p className="text-sm text-gray-600 mb-4">
             Option A: Capture GC signature on device, OR Option B: Attach photo of signed paper TNM
           </p>
@@ -287,37 +312,28 @@ export const CreateTNMPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Summary (Sticky on larger screens) */}
-        <div className="lg:fixed lg:top-20 lg:right-8 lg:w-96">
-          {project && (
-            <TNMSummary
-              laborItems={laborItems}
-              materialItems={materialItems}
-              equipmentItems={equipmentItems}
-              subcontractorItems={subcontractorItems}
-              laborOHP={project.labor_ohp_percent}
-              materialOHP={project.material_ohp_percent}
-              equipmentOHP={project.equipment_ohp_percent}
-              subcontractorOHP={project.subcontractor_ohp_percent}
-            />
-          )}
-        </div>
-
-        {/* Actions */}
-        <div className="flex items-center justify-end gap-3 pb-8">
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => navigate('/tnm-tickets')}
-          >
-            Cancel
-          </Button>
-          <Button type="submit" isLoading={isSubmitting}>
-            <Save className="w-4 h-4 mr-2" />
-            Submit for Review
-          </Button>
-        </div>
       </form>
+
+      {/* Sticky Summary Bar at Bottom */}
+      {project && (
+        <StickySummaryBar
+          laborSubtotal={laborSubtotal}
+          laborOHP={laborOHP}
+          laborTotal={laborTotal}
+          materialSubtotal={materialSubtotal}
+          materialOHP={materialOHP}
+          materialTotal={materialTotal}
+          equipmentSubtotal={equipmentSubtotal}
+          equipmentOHP={equipmentOHP}
+          equipmentTotal={equipmentTotal}
+          subcontractorSubtotal={subcontractorSubtotal}
+          subcontractorOHP={subcontractorOHP}
+          subcontractorTotal={subcontractorTotal}
+          proposalAmount={proposalAmount}
+          onSubmitForReview={handleSubmit(onSubmit)}
+          isSaving={isSubmitting}
+        />
+      )}
     </div>
   );
 };

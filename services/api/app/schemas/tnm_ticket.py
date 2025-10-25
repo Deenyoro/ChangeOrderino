@@ -130,10 +130,17 @@ class TNMTicketUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
     status: Optional[str] = None
+
+    # Settings overrides
     labor_ohp_percent: Optional[Decimal] = Field(None, ge=0, le=100)
     material_ohp_percent: Optional[Decimal] = Field(None, ge=0, le=100)
     equipment_ohp_percent: Optional[Decimal] = Field(None, ge=0, le=100)
     subcontractor_ohp_percent: Optional[Decimal] = Field(None, ge=0, le=100)
+    rate_project_manager: Optional[Decimal] = Field(None, ge=0)
+    rate_superintendent: Optional[Decimal] = Field(None, ge=0)
+    rate_carpenter: Optional[Decimal] = Field(None, ge=0)
+    rate_laborer: Optional[Decimal] = Field(None, ge=0)
+
     response_date: Optional[date] = None
     notes: Optional[str] = None
 
@@ -148,21 +155,27 @@ class TNMTicketResponse(TNMTicketBase):
     submitter_id: Optional[UUID]
     status: str
 
+    # Settings overrides (can be null if using project/global defaults)
+    labor_ohp_percent: Optional[Decimal]
+    material_ohp_percent: Optional[Decimal]
+    equipment_ohp_percent: Optional[Decimal]
+    subcontractor_ohp_percent: Optional[Decimal]
+    rate_project_manager: Optional[Decimal]
+    rate_superintendent: Optional[Decimal]
+    rate_carpenter: Optional[Decimal]
+    rate_laborer: Optional[Decimal]
+
     # Calculated totals
     labor_subtotal: Decimal
-    labor_ohp_percent: Decimal
     labor_total: Decimal
 
     material_subtotal: Decimal
-    material_ohp_percent: Decimal
     material_total: Decimal
 
     equipment_subtotal: Decimal
-    equipment_ohp_percent: Decimal
     equipment_total: Decimal
 
     subcontractor_subtotal: Decimal
-    subcontractor_ohp_percent: Decimal
     subcontractor_total: Decimal
 
     proposal_amount: Decimal
@@ -203,3 +216,13 @@ class SendRFCOResponse(BaseModel):
     approval_link: str
     sent_at: datetime
     email_log_id: str
+
+
+# ============ MANUAL APPROVAL SCHEMAS ============
+
+class ManualApprovalRequest(BaseModel):
+    """Request schema for manual approval override"""
+    status: str = Field(..., pattern='^(approved|denied|partially_approved)$')
+    approved_amount: Optional[Decimal] = Field(None, ge=0)
+    reason: Optional[str] = Field(None, max_length=500)
+    notes: Optional[str] = None

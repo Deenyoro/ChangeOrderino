@@ -4,17 +4,45 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, FolderKanban, Clock, CheckCircle } from 'lucide-react';
+import { FileText, FolderKanban, Clock, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { useTNMTickets } from '../hooks/useTNMTickets';
 import { useProjects } from '../hooks/useProjects';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { Button } from '../components/common/Button';
 
 export const Dashboard: React.FC = () => {
-  const { data: tickets, isLoading: ticketsLoading } = useTNMTickets();
-  const { data: projects, isLoading: projectsLoading } = useProjects({ is_active: true });
+  const { data: tickets, isLoading: ticketsLoading, isError: ticketsError, refetch: refetchTickets } = useTNMTickets();
+  const { data: projects, isLoading: projectsLoading, isError: projectsError, refetch: refetchProjects } = useProjects({ is_active: true });
 
   if (ticketsLoading || projectsLoading) {
     return <LoadingSpinner />;
+  }
+
+  // Error handling
+  if (ticketsError || projectsError) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="card max-w-md text-center">
+          <div className="text-red-600 mb-4">
+            <AlertCircle className="w-16 h-16 mx-auto" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Error Loading Dashboard</h2>
+          <p className="text-gray-600 mb-6">
+            {ticketsError ? 'Failed to load TNM tickets. ' : ''}
+            {projectsError ? 'Failed to load projects.' : ''}
+          </p>
+          <Button
+            onClick={() => {
+              if (ticketsError) refetchTickets();
+              if (projectsError) refetchProjects();
+            }}
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   const pendingTickets = tickets?.filter(t => t.status === 'pending_review').length || 0;

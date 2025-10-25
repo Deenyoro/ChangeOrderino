@@ -10,6 +10,7 @@ from app.models.approval import LineItemApproval
 from app.models.email_log import EmailLog
 from app.models.audit_log import AuditLog
 from app.models.asset import Asset
+from app.models.app_settings import AppSettings
 
 __all__ = [
     "User",
@@ -23,4 +24,5 @@ __all__ = [
     "EmailLog",
     "AuditLog",
     "Asset",
+    "AppSettings",
 ]

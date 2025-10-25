@@ -66,6 +66,7 @@ class Settings(BaseSettings):
     COMPANY_NAME: str = Field(default="TRE Construction")
     COMPANY_EMAIL: str = Field(default="changeorder@treconstruction.net")
     COMPANY_PHONE: str = Field(default="555-123-4567")
+    TZ: str = Field(default="America/New_York")
 
     # ============ CHANGE ORDER SETTINGS ============
     DEFAULT_MATERIAL_OHP: float = Field(default=15.0)
@@ -83,6 +84,11 @@ class Settings(BaseSettings):
     REMINDER_MAX_RETRIES: int = Field(default=4)
 
     APPROVAL_TOKEN_EXPIRATION_HOURS: int = Field(default=168)  # 7 days
+
+    # ============ SETTINGS BEHAVIOR ============
+    # If true, always use .env values instead of database settings
+    # Useful for development/testing or if you want .env to be the source of truth
+    PREFER_ENV_SETTINGS: bool = Field(default=False)
 
     # ============ CONFIGURATION ============
     model_config = SettingsConfigDict(
