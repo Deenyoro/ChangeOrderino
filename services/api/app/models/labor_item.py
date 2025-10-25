@@ -25,7 +25,10 @@ class LaborItem(Base):
 
     description = Column(Text, nullable=False)
     hours = Column(Numeric(8, 2), nullable=False)
-    labor_type = Column(SQLEnum(LaborType), nullable=False)
+    labor_type = Column(
+        SQLEnum(LaborType, name='labor_type', values_callable=lambda x: [e.value for e in x]),
+        nullable=False
+    )
     rate_per_hour = Column(Numeric(8, 2), nullable=False)
 
     # Calculated column

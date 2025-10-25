@@ -3,6 +3,7 @@ import logging
 from typing import List
 from uuid import UUID
 from datetime import datetime
+from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import Response
 from sqlalchemy import select, func
@@ -127,25 +128,25 @@ async def create_tnm_ticket(
     await db.flush()  # Get ticket ID
 
     # Add labor items
-    labor_subtotal = 0
+    labor_subtotal = Decimal('0')
     for item_data in ticket_data.labor_items:
         # Get rate from settings based on labor type
         rate = settings.get_labor_rate(item_data.labor_type)
         item = LaborItem(
             tnm_ticket_id=ticket.id,
-            **item_data.model_dump(),
+            **item_data.model_dump(exclude={'rate_per_hour'}),
             rate_per_hour=rate
         )
         db.add(item)
-        labor_subtotal += float(item_data.hours) * rate
+        labor_subtotal += Decimal(str(item_data.hours)) * Decimal(str(rate))
 
     ticket.labor_subtotal = labor_subtotal
 
     # Add material items
     material_subtotal = sum(
-        float(item.quantity) * float(item.unit_price)
+        Decimal(str(item.quantity)) * Decimal(str(item.unit_price))
         for item in ticket_data.material_items
-    )
+    ) if ticket_data.material_items else Decimal('0')
     for item_data in ticket_data.material_items:
         item = MaterialItem(tnm_ticket_id=ticket.id, **item_data.model_dump())
         db.add(item)
@@ -154,9 +155,9 @@ async def create_tnm_ticket(
 
     # Add equipment items
     equipment_subtotal = sum(
-        float(item.quantity) * float(item.unit_price)
+        Decimal(str(item.quantity)) * Decimal(str(item.unit_price))
         for item in ticket_data.equipment_items
-    )
+    ) if ticket_data.equipment_items else Decimal('0')
     for item_data in ticket_data.equipment_items:
         item = EquipmentItem(tnm_ticket_id=ticket.id, **item_data.model_dump())
         db.add(item)
@@ -165,8 +166,8 @@ async def create_tnm_ticket(
 
     # Add subcontractor items
     subcontractor_subtotal = sum(
-        float(item.amount) for item in ticket_data.subcontractor_items
-    )
+        Decimal(str(item.amount)) for item in ticket_data.subcontractor_items
+    ) if ticket_data.subcontractor_items else Decimal('0')
     for item_data in ticket_data.subcontractor_items:
         item = SubcontractorItem(tnm_ticket_id=ticket.id, **item_data.model_dump())
         db.add(item)

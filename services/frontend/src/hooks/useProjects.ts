@@ -39,8 +39,8 @@ export const useCreateProject = () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       toast.success('Project created successfully');
     },
-    onError: () => {
-      toast.error('Failed to create project');
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to create project');
     },
   });
 };
@@ -56,8 +56,8 @@ export const useUpdateProject = () => {
       queryClient.invalidateQueries({ queryKey: ['project', variables.id] });
       toast.success('Project updated successfully');
     },
-    onError: () => {
-      toast.error('Failed to update project');
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update project');
     },
   });
 };
@@ -71,8 +71,8 @@ export const useDeleteProject = () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       toast.success('Project deleted successfully');
     },
-    onError: () => {
-      toast.error('Failed to delete project');
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to delete project');
     },
   });
 };

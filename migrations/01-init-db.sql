@@ -7,7 +7,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Create custom types
-CREATE TYPE user_role AS ENUM ('admin', 'foreman', 'viewer');
+CREATE TYPE user_role AS ENUM ('admin', 'foreman', 'project_manager', 'office_staff', 'viewer');
 CREATE TYPE tnm_status AS ENUM ('draft', 'pending_review', 'ready_to_send', 'sent', 'viewed', 'partially_approved', 'approved', 'denied', 'cancelled');
 CREATE TYPE labor_type AS ENUM ('project_manager', 'superintendent', 'carpenter', 'laborer');
 CREATE TYPE approval_status AS ENUM ('pending', 'approved', 'denied');
@@ -54,9 +54,18 @@ CREATE TABLE projects (
     equipment_ohp_percent DECIMAL(5,2) DEFAULT 10.00,
     subcontractor_ohp_percent DECIMAL(5,2) DEFAULT 5.00,
 
+    -- Labor rate overrides (nullable = use global defaults if NULL)
+    rate_project_manager NUMERIC(8,2),
+    rate_superintendent NUMERIC(8,2),
+    rate_carpenter NUMERIC(8,2),
+    rate_laborer NUMERIC(8,2),
+
     -- Reminder settings
     reminder_interval_days INTEGER DEFAULT 7,
     reminder_max_retries INTEGER DEFAULT 4,
+
+    -- Approval token expiration override (nullable = use global default if NULL)
+    approval_token_expiration_hours INTEGER,
 
     is_active BOOLEAN DEFAULT true,
     notes TEXT,
@@ -115,6 +124,12 @@ CREATE TABLE tnm_tickets (
 
     proposal_amount DECIMAL(12,2) DEFAULT 0.00,
     approved_amount DECIMAL(12,2) DEFAULT 0.00,
+
+    -- Labor rate snapshots (captured at TNM creation from project or global defaults)
+    rate_project_manager NUMERIC(8,2),
+    rate_superintendent NUMERIC(8,2),
+    rate_carpenter NUMERIC(8,2),
+    rate_laborer NUMERIC(8,2),
 
     -- Attachments
     signature_url TEXT,

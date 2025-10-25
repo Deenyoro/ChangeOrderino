@@ -7,3 +7,4 @@ export * from './tnmTicket';
 export * from './lineItem';
 export * from './api';
 export * from './user';
+export * from './settings';

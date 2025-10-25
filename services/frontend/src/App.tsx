@@ -12,6 +12,7 @@ import { initKeycloak, getUserInfo } from './keycloak';
 import { setUser, setLoading } from './store/slices/authSlice';
 import { LoadingScreen } from './components/common/LoadingSpinner';
 import { Layout } from './components/layout/Layout';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { UserRole } from './types/user';
 
 // Pages
@@ -24,6 +25,7 @@ import { CreateTNMPage } from './pages/CreateTNMPage';
 import { TNMDetailPage } from './pages/TNMDetailPage';
 import { GCApprovalPage } from './pages/GCApprovalPage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import SettingsPage from './pages/SettingsPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -115,20 +117,83 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <Routes>
-            {/* Protected routes with layout */}
-            <Route element={<Layout><Dashboard /></Layout>} path="/" />
+            {/* Dashboard - Admin, PM, Office Staff only */}
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.PROJECT_MANAGER, UserRole.OFFICE_STAFF]}>
+                  <Layout><Dashboard /></Layout>
+                </ProtectedRoute>
+              }
+            />
 
-            {/* Projects */}
-            <Route element={<Layout><ProjectsPage /></Layout>} path="/projects" />
-            <Route element={<Layout><NewProjectPage /></Layout>} path="/projects/new" />
-            <Route element={<Layout><ProjectDetailPage /></Layout>} path="/projects/:id" />
+            {/* Projects - Admin, PM, Office Staff only */}
+            <Route
+              path="/projects"
+              element={
+                <ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.PROJECT_MANAGER, UserRole.OFFICE_STAFF]}>
+                  <Layout><ProjectsPage /></Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/projects/new"
+              element={
+                <ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.PROJECT_MANAGER, UserRole.OFFICE_STAFF]}>
+                  <Layout><NewProjectPage /></Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/projects/:id"
+              element={
+                <ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.PROJECT_MANAGER, UserRole.OFFICE_STAFF]}>
+                  <Layout><ProjectDetailPage /></Layout>
+                </ProtectedRoute>
+              }
+            />
 
-            {/* TNM Tickets */}
-            <Route element={<Layout><TNMTicketsPage /></Layout>} path="/tnm-tickets" />
-            <Route element={<Layout><CreateTNMPage /></Layout>} path="/tnm/create" />
-            <Route element={<Layout><TNMDetailPage /></Layout>} path="/tnm/:id" />
+            {/* TNM Tickets List - Admin, PM, Office Staff only (NOT foreman) */}
+            <Route
+              path="/tnm-tickets"
+              element={
+                <ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.PROJECT_MANAGER, UserRole.OFFICE_STAFF]}>
+                  <Layout><TNMTicketsPage /></Layout>
+                </ProtectedRoute>
+              }
+            />
 
-            {/* Public GC Approval (no auth) */}
+            {/* Create TNM - All authenticated roles (including foreman) */}
+            <Route
+              path="/tnm/create"
+              element={
+                <ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.PROJECT_MANAGER, UserRole.OFFICE_STAFF, UserRole.FOREMAN]}>
+                  <Layout><CreateTNMPage /></Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* TNM Details - Admin, PM, Office Staff only (NOT foreman) */}
+            <Route
+              path="/tnm/:id"
+              element={
+                <ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.PROJECT_MANAGER, UserRole.OFFICE_STAFF]}>
+                  <Layout><TNMDetailPage /></Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Settings - Admin only */}
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
+                  <Layout><SettingsPage /></Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Public GC Approval (no auth required) */}
             <Route element={<GCApprovalPage />} path="/approve/:token" />
 
             {/* 404 */}

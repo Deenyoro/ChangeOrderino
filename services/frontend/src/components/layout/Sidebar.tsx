@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, FolderKanban, FileText, X } from 'lucide-react';
+import { LayoutDashboard, FolderKanban, FileText, Settings, X } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../../store';
 import { setSidebarOpen } from '../../store/slices/uiSlice';
@@ -13,8 +13,9 @@ import { useAuth } from '../../hooks/useAuth';
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard, roles: ['admin', 'office_staff', 'project_manager'] },
   { name: 'Projects', href: '/projects', icon: FolderKanban, roles: ['admin', 'office_staff', 'project_manager'] },
-  { name: 'TNM Tickets', href: '/tnm-tickets', icon: FileText, roles: ['admin', 'office_staff', 'project_manager', 'foreman'] },
-  { name: 'Create TNM', href: '/tnm/create', icon: FileText, roles: ['foreman'] },
+  { name: 'TNM Tickets', href: '/tnm-tickets', icon: FileText, roles: ['admin', 'office_staff', 'project_manager'] },
+  { name: 'Create TNM', href: '/tnm/create', icon: FileText, roles: ['foreman', 'admin', 'office_staff', 'project_manager'] },
+  { name: 'Settings', href: '/settings', icon: Settings, roles: ['admin'] },
 ];
 
 export const Sidebar: React.FC = () => {

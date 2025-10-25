@@ -25,7 +25,11 @@ class LineItemApproval(Base):
     line_item_type = Column(String(50), nullable=False)  # 'labor', 'material', 'equipment', 'subcontractor'
     line_item_id = Column(UUID(as_uuid=True), nullable=False, index=True)
 
-    status = Column(SQLEnum(ApprovalStatus), nullable=False, default=ApprovalStatus.PENDING)
+    status = Column(
+        SQLEnum(ApprovalStatus, name='approval_status', values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        default=ApprovalStatus.PENDING
+    )
     approved_amount = Column(Numeric(12, 2))
     gc_comment = Column(Text)
 

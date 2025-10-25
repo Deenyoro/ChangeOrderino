@@ -43,8 +43,8 @@ export const useCreateTNMTicket = () => {
       queryClient.invalidateQueries({ queryKey: ['tnm-tickets'] });
       toast.success('TNM ticket created successfully');
     },
-    onError: () => {
-      toast.error('Failed to create TNM ticket');
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to create TNM ticket');
     },
   });
 };
@@ -60,8 +60,8 @@ export const useUpdateTNMTicket = () => {
       queryClient.invalidateQueries({ queryKey: ['tnm-ticket', variables.id] });
       toast.success('TNM ticket updated successfully');
     },
-    onError: () => {
-      toast.error('Failed to update TNM ticket');
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update TNM ticket');
     },
   });
 };
@@ -77,8 +77,8 @@ export const useUpdateTNMStatus = () => {
       queryClient.invalidateQueries({ queryKey: ['tnm-ticket', variables.id] });
       toast.success('Status updated successfully');
     },
-    onError: () => {
-      toast.error('Failed to update status');
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update status');
     },
   });
 };
@@ -93,8 +93,8 @@ export const useSendTNMForApproval = () => {
       queryClient.invalidateQueries({ queryKey: ['tnm-ticket', id] });
       toast.success('TNM ticket sent for approval');
     },
-    onError: () => {
-      toast.error('Failed to send TNM ticket');
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to send TNM ticket');
     },
   });
 };
@@ -108,8 +108,8 @@ export const useDeleteTNMTicket = () => {
       queryClient.invalidateQueries({ queryKey: ['tnm-tickets'] });
       toast.success('TNM ticket deleted successfully');
     },
-    onError: () => {
-      toast.error('Failed to delete TNM ticket');
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to delete TNM ticket');
     },
   });
 };
@@ -124,8 +124,8 @@ export const useSendReminder = () => {
       queryClient.invalidateQueries({ queryKey: ['tnm-ticket', id] });
       toast.success('Reminder sent successfully');
     },
-    onError: () => {
-      toast.error('Failed to send reminder');
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to send reminder');
     },
   });
 };
@@ -151,8 +151,8 @@ export const useManualApprovalOverride = () => {
       queryClient.invalidateQueries({ queryKey: ['tnm-ticket', variables.id] });
       toast.success('Approval status updated successfully');
     },
-    onError: () => {
-      toast.error('Failed to update approval status');
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update approval status');
     },
   });
 };

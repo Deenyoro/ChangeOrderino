@@ -38,7 +38,20 @@ const handleResponse = async <T>(response: Response): Promise<T> => {
 
     try {
       const errorJson = JSON.parse(errorText);
-      errorMessage = errorJson.detail || errorJson.message || errorMessage;
+
+      // Handle FastAPI validation errors (422)
+      if (response.status === 422 && errorJson.detail && Array.isArray(errorJson.detail)) {
+        const validationErrors = errorJson.detail
+          .map((err: any) => {
+            const field = err.loc ? err.loc.join('.') : 'unknown';
+            const message = err.msg || 'Invalid value';
+            return `${field}: ${message}`;
+          })
+          .join(', ');
+        errorMessage = `Validation Error: ${validationErrors}`;
+      } else {
+        errorMessage = errorJson.detail || errorJson.message || errorMessage;
+      }
     } catch {
       // Use the raw text if not JSON
       errorMessage = errorText || errorMessage;

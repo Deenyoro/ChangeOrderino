@@ -47,7 +47,12 @@ class TNMTicket(Base):
     response_date = Column(Date)
 
     # Status
-    status = Column(SQLEnum(TNMStatus), nullable=False, default=TNMStatus.DRAFT, index=True)
+    status = Column(
+        SQLEnum(TNMStatus, name='tnm_status', values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        default=TNMStatus.DRAFT,
+        index=True
+    )
 
     # OH&P override percentages (nullable = use project/global defaults if NULL)
     material_ohp_percent = Column(Numeric(5, 2), nullable=True)
