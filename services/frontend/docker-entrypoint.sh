@@ -30,7 +30,9 @@ if [ -f /usr/share/nginx/html/index.html ]; then
   # Check if config.js is already included
   if ! grep -q "config.js" /usr/share/nginx/html/index.html; then
     echo "📝 Injecting config.js into index.html..."
-    sed -i 's|<head>|<head>\n    <script src="/config.js"></script>|' /usr/share/nginx/html/index.html
+    # Use temp file for Alpine Linux compatibility (BusyBox sed)
+    sed 's|<head>|<head>\n    <script src="/config.js"></script>|' /usr/share/nginx/html/index.html > /tmp/index.html.tmp
+    mv /tmp/index.html.tmp /usr/share/nginx/html/index.html
     echo "✅ config.js injected into index.html"
   fi
 fi
