@@ -40,24 +40,13 @@ docker compose exec -T api curl -s -X POST "http://keycloak:8080/admin/realms/ch
 echo "✓ Foreman role ready"
 
 echo ""
-echo "Step 3: Getting current realm configuration..."
+echo "Step 3: Adding foreman to default roles..."
 
-# Get current realm settings
-REALM_DATA=$(docker compose exec -T api curl -s -X GET "http://keycloak:8080/admin/realms/changeorderino" \
-  -H "Authorization: Bearer $TOKEN")
-
-echo "✓ Current configuration retrieved"
-
-echo ""
-echo "Step 4: Updating default roles..."
-
-# Update realm to include foreman in default roles
-docker compose exec -T api curl -s -X PUT "http://keycloak:8080/admin/realms/changeorderino" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "defaultRoles": ["offline_access", "uma_authorization", "foreman"]
-  }' > /dev/null
+# Add foreman to the default-roles-changeorderino composite role
+docker compose exec keycloak /opt/keycloak/bin/kcadm.sh add-roles \
+  -r changeorderino \
+  --rname default-roles-changeorderino \
+  --rolename foreman 2>&1 || echo "   (Role may already be in default roles)"
 
 echo "✓ Default roles updated"
 
