@@ -1,0 +1,78 @@
+name: Deploy Application
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+        - production
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+
+    - name: Deploy via SSH
+      uses: appleboy/ssh-action@v1.2.2
+      with:
+        host: ${{ secrets.DEPLOY_HOST }}
+        username: ${{ secrets.DEPLOY_USER }}
+        key: ${{ secrets.DEPLOY_KEY }}
+        port: ${{ secrets.DEPLOY_PORT || 22 }}
+        script: |
+          cd /opt/docker/ChangeOrderino || exit 1
+
+          # Backup current state
+          docker compose down || true
+          cp .env .env.backup.$(date +%Y%m%d_%H%M%S) || true
+
+          # Update code
+          git fetch --all
+          git checkout ${{ github.ref_name }}
+          git pull origin ${{ github.ref_name }}
+
+          # Start services
+          docker compose up -d
+
+          # Wait for API to be healthy (up to 2 minutes)
+          echo "Waiting for API to be healthy..."
+          for i in {1..24}; do
+            if curl -f http://localhost:3000/api/health 2>/dev/null; then
+              echo "API is healthy!"
+              break
+            fi
+            echo "Attempt $i/24 - waiting 5s..."
+            sleep 5
+          done
+
+          # Check container health status
+          echo "Container health status:"
+          docker compose ps
+
+          # Final health check with detailed error output
+          if ! curl -f http://localhost:3000/api/health 2>&1; then
+            echo "ERROR: API health check failed"
+            echo "API container logs (last 100 lines):"
+            docker compose logs --tail=100 api
+            exit 1
+          fi
+
+          echo "Deployment completed successfully"
+
+    - name: Deployment notification
+      if: always()
+      run: |
+        echo "Deployment status: ${{ job.status }}"
+        echo "Deployed version: ${{ github.ref_name }}"

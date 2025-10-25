@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fetch Test</title>
+</head>
+<body>
+    <h1>Direct Fetch Test</h1>
+    <button onclick="testFetch()">Test Fetch</button>
+    <pre id="output"></pre>
+
+    <script>
+        function log(msg) {
+            document.getElementById('output').textContent += msg + '\n';
+            console.log(msg);
+        }
+
+        async function testFetch() {
+            const testUrl = 'http://10.2.6.141:3000/api/v1/projects?is_active=true';
+            log('=== FETCH TEST ===');
+            log('URL: ' + testUrl);
+            log('Origin: ' + window.location.origin);
+
+            try {
+                log('Calling fetch...');
+                const response = await fetch(testUrl);
+                log('Response status: ' + response.status);
+                const data = await response.json();
+                log('Data received: ' + JSON.stringify(data).substring(0, 100));
+            } catch (error) {
+                log('ERROR: ' + error.message);
+                log('Error stack: ' + error.stack);
+            }
+        }
+    </script>
+</body>
+</html>

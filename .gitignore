@@ -1,0 +1,87 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Docker
+*.log
+
+# Certificates (don't commit real certs)
+certs/*.pem
+certs/*.key
+certs/*.crt
+!certs/.gitkeep
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Uploads & Storage
+uploads/
+storage/
+minio-data/
+
+# Logs
+*.log
+logs/
+
+# OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Python virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# Poetry
+poetry.lock
+
+# Frontend
+.next/
+out/
+.cache/
+.parcel-cache/
+
+# MinIO
+.minio.sys/
+
+# Backups
+*.bak
+*.backup
+*.sql.gz
+
+# Claude Code session notes
+claude.md

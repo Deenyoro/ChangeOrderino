@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="header">
+    <h1>Request for Change Order</h1>
+    <p>{{ tnm_number }}</p>
+</div>
+
+<div class="content">
+    <p>Dear General Contractor,</p>
+
+    <p>
+        Please review the following Request for Change Order (RFCO) for your approval.
+    </p>
+
+    <div class="info-box">
+        <h3>Project Information</h3>
+        <div class="info-row">
+            <span class="info-label">Project:</span>
+            <span class="info-value">{{ project_name }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Project Number:</span>
+            <span class="info-value">{{ project_number }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">TNM Number:</span>
+            <span class="info-value">{{ tnm_number }}</span>
+        </div>
+        {% if rfco_number %}
+        <div class="info-row">
+            <span class="info-label">RFCO Number:</span>
+            <span class="info-value">{{ rfco_number }}</span>
+        </div>
+        {% endif %}
+        <div class="info-row">
+            <span class="info-label">Date:</span>
+            <span class="info-value">{{ proposal_date }}</span>
+        </div>
+    </div>
+
+    <div class="info-box">
+        <h3>Change Order Details</h3>
+        <div class="info-row">
+            <span class="info-label">Title:</span>
+            <span class="info-value">{{ title }}</span>
+        </div>
+        {% if description %}
+        <div style="margin-top: 10px;">
+            <span class="info-label">Description:</span>
+            <p style="margin: 5px 0 0 0; color: #1e293b;">{{ description }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="cost-breakdown">
+        <h3 style="margin-bottom: 15px; color: #1e40af;">Cost Breakdown</h3>
+
+        {% if labor_subtotal > 0 %}
+        <div class="cost-item">
+            <span>Labor</span>
+            <span>${{ "%.2f"|format(labor_subtotal) }}</span>
+        </div>
+        <div class="cost-item" style="padding-left: 20px; font-size: 14px; color: #64748b;">
+            <span>OH&P ({{ labor_ohp_percent }}%)</span>
+            <span>${{ "%.2f"|format(labor_total - labor_subtotal) }}</span>
+        </div>
+        <div class="cost-item" style="padding-left: 20px; font-weight: 600;">
+            <span>Labor Total</span>
+            <span>${{ "%.2f"|format(labor_total) }}</span>
+        </div>
+        {% endif %}
+
+        {% if material_subtotal > 0 %}
+        <div class="cost-item">
+            <span>Materials</span>
+            <span>${{ "%.2f"|format(material_subtotal) }}</span>
+        </div>
+        <div class="cost-item" style="padding-left: 20px; font-size: 14px; color: #64748b;">
+            <span>OH&P ({{ material_ohp_percent }}%)</span>
+            <span>${{ "%.2f"|format(material_total - material_subtotal) }}</span>
+        </div>
+        <div class="cost-item" style="padding-left: 20px; font-weight: 600;">
+            <span>Materials Total</span>
+            <span>${{ "%.2f"|format(material_total) }}</span>
+        </div>
+        {% endif %}
+
+        {% if equipment_subtotal > 0 %}
+        <div class="cost-item">
+            <span>Equipment</span>
+            <span>${{ "%.2f"|format(equipment_subtotal) }}</span>
+        </div>
+        <div class="cost-item" style="padding-left: 20px; font-size: 14px; color: #64748b;">
+            <span>OH&P ({{ equipment_ohp_percent }}%)</span>
+            <span>${{ "%.2f"|format(equipment_total - equipment_subtotal) }}</span>
+        </div>
+        <div class="cost-item" style="padding-left: 20px; font-weight: 600;">
+            <span>Equipment Total</span>
+            <span>${{ "%.2f"|format(equipment_total) }}</span>
+        </div>
+        {% endif %}
+
+        {% if subcontractor_subtotal > 0 %}
+        <div class="cost-item">
+            <span>Subcontractors</span>
+            <span>${{ "%.2f"|format(subcontractor_subtotal) }}</span>
+        </div>
+        <div class="cost-item" style="padding-left: 20px; font-size: 14px; color: #64748b;">
+            <span>OH&P ({{ subcontractor_ohp_percent }}%)</span>
+            <span>${{ "%.2f"|format(subcontractor_total - subcontractor_subtotal) }}</span>
+        </div>
+        <div class="cost-item" style="padding-left: 20px; font-weight: 600;">
+            <span>Subcontractors Total</span>
+            <span>${{ "%.2f"|format(subcontractor_total) }}</span>
+        </div>
+        {% endif %}
+
+        <div class="cost-total">
+            <div style="display: flex; justify-content: space-between;">
+                <span>Total Proposal Amount</span>
+                <span>${{ "%.2f"|format(proposal_amount) }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-box">
+        <h3>Submitted By</h3>
+        <div class="info-row">
+            <span class="info-label">Name:</span>
+            <span class="info-value">{{ submitter_name }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Email:</span>
+            <span class="info-value">{{ submitter_email }}</span>
+        </div>
+    </div>
+
+    <div class="button-container">
+        <a href="{{ approval_link }}" class="button">
+            Review & Approve RFCO
+        </a>
+    </div>
+
+    <p style="text-align: center; color: #64748b; font-size: 14px;">
+        Please click the button above to review the full details and provide your approval decision.
+    </p>
+
+    <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #64748b;">
+        If you have any questions about this change order, please contact us at {{ company_email }} or {{ company_phone }}.
+    </p>
+</div>
+{% endblock %}

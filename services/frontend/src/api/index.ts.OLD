@@ -1,0 +1,109 @@
+/**
+ * Axios API client configuration
+ */
+
+import axios, { AxiosInstance, AxiosError } from 'axios';
+import { getToken } from '../keycloak';
+import toast from 'react-hot-toast';
+
+// Get API base URL from runtime config with fallback to build-time env
+const getApiBaseUrl = () => {
+  const runtimeConfig = (window as any).__RUNTIME_CONFIG__ || {};
+  return runtimeConfig.API_URL || import.meta.env.VITE_API_URL || '/api';
+};
+
+const apiClient: AxiosInstance = axios.create({
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: 30000,
+});
+
+// Request interceptor to add auth token and build full URL
+apiClient.interceptors.request.use(
+  (config) => {
+    // Get baseURL from runtime config
+    const baseURL = getApiBaseUrl();
+
+    // Strip leading slash if present
+    let url = config.url || '';
+    if (url.startsWith('/')) {
+      console.warn('⚠️ Request URL had leading slash - stripping:', url);
+      url = url.slice(1);
+    }
+
+    // BUILD FULL URL WITHOUT LEADING SLASH to make it truly relative
+    // Strip leading slash from baseURL too
+    const normalizedBase = baseURL.startsWith('/') ? baseURL.slice(1) : baseURL;
+    const normalizedUrl = url.startsWith('/') ? url.slice(1) : url;
+
+    // Build relative URL: api/v1/projects (NO leading slash)
+    config.url = normalizedBase.endsWith('/')
+      ? `${normalizedBase}${normalizedUrl}`
+      : `${normalizedBase}/${normalizedUrl}`;
+
+    // CRITICAL: Delete baseURL to prevent axios from concatenating
+    delete config.baseURL;
+
+    console.log('🔌 [v3-NO-LEADING-SLASH] FINAL URL:', config.url);
+    console.log('🔌 [v3-NO-LEADING-SLASH] baseURL deleted:', !config.baseURL);
+
+    const token = getToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor for error handling
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    if (error.response) {
+      const status = error.response.status;
+      const data: any = error.response.data;
+
+      switch (status) {
+        case 401:
+          toast.error('Unauthorized. Please log in again.');
+          break;
+        case 403:
+          toast.error('You do not have permission to perform this action.');
+          break;
+        case 404:
+          toast.error('Resource not found.');
+          break;
+        case 422:
+          const message = data.detail || 'Validation error';
+          toast.error(message);
+          break;
+        case 500:
+          toast.error('Server error. Please try again later.');
+          break;
+        default:
+          toast.error(data.detail || 'An error occurred');
+      }
+    } else if (error.request) {
+      toast.error('Network error. Please check your connection.');
+    } else {
+      toast.error('An unexpected error occurred.');
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+export default apiClient;
+
+// Export commonly used methods
+export const api = {
+  get: apiClient.get,
+  post: apiClient.post,
+  put: apiClient.put,
+  patch: apiClient.patch,
+  delete: apiClient.delete,
+};

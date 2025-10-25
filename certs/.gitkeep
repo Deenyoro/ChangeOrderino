@@ -1,0 +1,3 @@
+# Place SSL/TLS certificates here
+# For development, you can generate self-signed certs:
+# openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout key.pem -out cert.pem

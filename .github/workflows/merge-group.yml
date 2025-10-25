@@ -1,0 +1,32 @@
+name: Merge Queue
+
+# Trigger on merge queue to ensure checks run before merging
+on:
+  merge_group:
+    types: [checks_requested]
+
+jobs:
+  quick-checks:
+    name: Quick CI Checks for Merge Queue
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: services/frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: services/frontend
+        run: npm ci
+
+      - name: Run linting
+        working-directory: services/frontend
+        run: npm run lint
+
+      - name: Build frontend
+        working-directory: services/frontend
+        run: npm run build

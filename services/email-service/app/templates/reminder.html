@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="header">
+    <h1>REMINDER: Change Order Awaiting Approval</h1>
+    <p>{{ tnm_number }}</p>
+</div>
+
+<div class="content">
+    <div class="alert urgent">
+        <strong>Reminder #{{ reminder_number }}</strong> - This change order is still awaiting your approval.
+    </div>
+
+    <p>Dear General Contractor,</p>
+
+    <p>
+        This is a friendly reminder that the following Request for Change Order (RFCO) is still pending your review and approval.
+    </p>
+
+    <div class="info-box">
+        <h3>Project Information</h3>
+        <div class="info-row">
+            <span class="info-label">Project:</span>
+            <span class="info-value">{{ project_name }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Project Number:</span>
+            <span class="info-value">{{ project_number }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">TNM Number:</span>
+            <span class="info-value">{{ tnm_number }}</span>
+        </div>
+        {% if rfco_number %}
+        <div class="info-row">
+            <span class="info-label">RFCO Number:</span>
+            <span class="info-value">{{ rfco_number }}</span>
+        </div>
+        {% endif %}
+        <div class="info-row">
+            <span class="info-label">Original Date:</span>
+            <span class="info-value">{{ proposal_date }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Days Pending:</span>
+            <span class="info-value">{{ days_pending }} days</span>
+        </div>
+    </div>
+
+    <div class="info-box">
+        <h3>Change Order Summary</h3>
+        <div class="info-row">
+            <span class="info-label">Title:</span>
+            <span class="info-value">{{ title }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Proposal Amount:</span>
+            <span class="info-value" style="font-size: 18px; font-weight: 600; color: #1e40af;">
+                ${{ "%.2f"|format(proposal_amount) }}
+            </span>
+        </div>
+    </div>
+
+    <div class="button-container">
+        <a href="{{ approval_link }}" class="button">
+            Review & Approve RFCO
+        </a>
+    </div>
+
+    <p style="text-align: center; color: #64748b; font-size: 14px;">
+        Please click the button above to review and provide your approval decision.
+    </p>
+
+    <div class="alert" style="margin-top: 30px;">
+        <strong>Need More Information?</strong><br>
+        If you need additional details or have questions about this change order, please contact us immediately.
+    </div>
+
+    <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #64748b;">
+        Contact: {{ company_email }} | {{ company_phone }}
+    </p>
+</div>
+{% endblock %}

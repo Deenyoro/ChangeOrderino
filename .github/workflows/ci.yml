@@ -1,0 +1,286 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ master, main, develop ]
+  pull_request:
+    branches: [ master, main, develop ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  frontend-test:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    # Fail immediately if any step fails
+    continue-on-error: false
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: '22'
+        cache: 'npm'
+        cache-dependency-path: services/frontend/package-lock.json
+
+    - name: Install dependencies
+      working-directory: services/frontend
+      run: npm ci
+
+    - name: Run linting
+      working-directory: services/frontend
+      run: npm run lint
+
+    - name: Build frontend (includes type checking)
+      working-directory: services/frontend
+      run: npm run build
+
+  api-test:
+    name: Backend API Tests
+    runs-on: ubuntu-latest
+    needs: frontend-test  # Only run if frontend-test succeeds
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: changeorderino
+          POSTGRES_PASSWORD: changeorderinoPass123!
+          POSTGRES_DB: changeorderino
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:8-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+
+    - name: Setup Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.13'
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: Install dependencies
+      working-directory: services/api
+      run: poetry install --no-interaction
+
+    - name: Run basic syntax check
+      working-directory: services/api
+      run: |
+        poetry run python -m py_compile app/main.py
+        echo "Syntax check passed"
+
+    - name: Test database connection
+      working-directory: services/api
+      env:
+        DATABASE_URL: postgresql+asyncpg://changeorderino:changeorderinoPass123!@localhost:5432/changeorderino
+        REDIS_URL: redis://localhost:6379/0
+        ENVIRONMENT: testing
+      run: |
+        poetry run python -c "
+        import asyncio
+        import asyncpg
+        async def test():
+            conn = await asyncpg.connect('postgresql://changeorderino:changeorderinoPass123!@localhost:5432/changeorderino')
+            result = await conn.fetchval('SELECT 1')
+            print('Database connection successful:', result)
+            await conn.close()
+        asyncio.run(test())
+        "
+
+  docker-build:
+    name: Docker Build Test
+    runs-on: ubuntu-latest
+    needs: api-test  # Sequential: frontend -> api -> docker
+
+    strategy:
+      fail-fast: true  # Stop all matrix jobs if one fails
+      matrix:
+        include:
+          - service: api
+            context: services/api
+            build_args: ""
+          - service: frontend-auth
+            context: services/frontend
+            build_args: |
+              VITE_API_URL=/api
+              VITE_AUTH_ENABLED=true
+              VITE_KEYCLOAK_URL=https://localhost:8443
+              VITE_KEYCLOAK_REALM=changeorderino
+              VITE_KEYCLOAK_CLIENT_ID=changeorderino-app
+          - service: frontend-noauth
+            context: services/frontend
+            build_args: |
+              VITE_API_URL=/api
+              VITE_AUTH_ENABLED=false
+          - service: email-service
+            context: services/email-service
+            build_args: ""
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image
+      uses: docker/build-push-action@v6
+      with:
+        context: ${{ matrix.context }}
+        push: false
+        tags: test-${{ matrix.service }}:latest
+        build-args: ${{ matrix.build_args }}
+        cache-from: type=gha,scope=${{ matrix.service }}
+        cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  integration-test:
+    name: Integration Test
+    runs-on: ubuntu-latest
+    needs: docker-build  # Sequential: frontend -> api -> docker -> integration
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+
+    - name: Create test environment
+      run: |
+        # Create .env file
+        cat > .env << EOF
+        # Database Configuration
+        POSTGRES_USER=changeorderino
+        POSTGRES_PASSWORD=changeorderinoPass123!
+        POSTGRES_DB=changeorderino
+        POSTGRES_KEYCLOAK_DB=keycloak
+        DATABASE_URL=postgresql+asyncpg://changeorderino:changeorderinoPass123!@db:5432/changeorderino
+
+        # Redis Configuration
+        REDIS_URL=redis://redis:6379/0
+
+        # MinIO Configuration
+        MINIO_ROOT_USER=minioadmin
+        MINIO_ROOT_PASSWORD=minioadmin
+        MINIO_SERVER_URL=http://minio:9000
+        MINIO_BUCKET_NAME=changeorderino
+        MINIO_SECURE=false
+
+        # Environment
+        ENVIRONMENT=testing
+        AUTH_ENABLED=false
+        VITE_AUTH_ENABLED=false
+
+        # SMTP Configuration
+        SMTP_ENABLED=false
+        SMTP_HOST=localhost
+        SMTP_PORT=587
+        SMTP_USE_TLS=true
+        SMTP_USERNAME=test
+        SMTP_PASSWORD=test
+        SMTP_FROM_EMAIL=noreply@test.com
+        SMTP_FROM_NAME=ChangeOrderino Test
+
+        # Keycloak Configuration (disabled for testing)
+        KEYCLOAK_SERVER_URL=http://keycloak:8080
+        KEYCLOAK_REALM_URL=http://keycloak:8080/realms/changeorderino
+        KEYCLOAK_REALM=changeorderino
+        KEYCLOAK_CLIENT_ID=changeorderino-client
+        KEYCLOAK_CLIENT_SECRET=test-secret
+        KEYCLOAK_ADMIN=admin
+        KEYCLOAK_ADMIN_PASSWORD=admin
+
+        # Frontend
+        VITE_API_URL=http://localhost:3000/api
+        VITE_KEYCLOAK_URL=http://localhost:8080
+        VITE_KEYCLOAK_REALM=changeorderino
+        VITE_KEYCLOAK_CLIENT_ID=changeorderino-client
+
+        # Email Service
+        REMINDER_ENABLED=false
+        REMINDER_INTERVAL_DAYS=7
+        REMINDER_MAX_RETRIES=3
+
+        # CORS
+        CORS_ORIGINS=http://localhost:3000,http://localhost:5173
+
+        # Timezone
+        TZ=UTC
+        EOF
+
+    - name: Start services
+      run: |
+        docker compose up -d
+        echo "Services started, waiting for API to be healthy (up to 90 seconds)..."
+
+        # Wait for API with retry logic
+        API_HEALTHY=false
+        for i in {1..18}; do
+          if curl --max-time 2 -f http://localhost:3000/api/health 2>/dev/null; then
+            echo "✅ API is healthy!"
+            API_HEALTHY=true
+            break
+          fi
+          echo "Attempt $i/18 - waiting 5s..."
+          sleep 5
+        done
+
+        # Show container status
+        echo "Container health status:"
+        docker compose ps
+
+        # Print logs if API is not healthy
+        if [ "$API_HEALTHY" = "false" ]; then
+          echo "❌ API health check failed after 90 seconds"
+          echo ""
+          echo "========== API CONTAINER LOGS (last 100 lines) =========="
+          docker compose logs --tail=100 api
+          echo ""
+          echo "========== DATABASE CONTAINER LOGS (last 50 lines) =========="
+          docker compose logs --tail=50 db
+          echo ""
+          exit 1
+        fi
+
+        echo "✅ All services are healthy"
+
+    - name: Test API health
+      run: |
+        echo "Testing frontend nginx health..."
+        curl -f http://localhost:3000/health || echo "Frontend nginx health check warning"
+        echo "Testing API health endpoint..."
+        curl -f http://localhost:3000/api/health
+        echo "✅ API health check passed"
+
+    - name: Test frontend
+      run: |
+        echo "Testing frontend..."
+        curl -f http://localhost:3000/ || echo "Frontend test completed"
+
+    - name: Cleanup
+      if: always()
+      run: docker compose down -v

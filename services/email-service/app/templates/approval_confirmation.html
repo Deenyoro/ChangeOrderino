@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="header">
+    <h1>Change Order {{ status|title }}</h1>
+    <p>{{ tnm_number }}</p>
+</div>
+
+<div class="content">
+    {% if status == "approved" %}
+    <div class="alert success">
+        <strong>Approved</strong> - This change order has been approved by the General Contractor.
+    </div>
+    {% elif status == "denied" %}
+    <div class="alert urgent">
+        <strong>Denied</strong> - This change order has been denied by the General Contractor.
+    </div>
+    {% elif status == "partially_approved" %}
+    <div class="alert">
+        <strong>Partially Approved</strong> - Some items have been approved, others denied.
+    </div>
+    {% endif %}
+
+    <p>Hello Team,</p>
+
+    <p>
+        The General Contractor has responded to the following change order:
+    </p>
+
+    <div class="info-box">
+        <h3>Project Information</h3>
+        <div class="info-row">
+            <span class="info-label">Project:</span>
+            <span class="info-value">{{ project_name }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Project Number:</span>
+            <span class="info-value">{{ project_number }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">TNM Number:</span>
+            <span class="info-value">{{ tnm_number }}</span>
+        </div>
+        {% if rfco_number %}
+        <div class="info-row">
+            <span class="info-label">RFCO Number:</span>
+            <span class="info-value">{{ rfco_number }}</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="info-box">
+        <h3>Change Order Details</h3>
+        <div class="info-row">
+            <span class="info-label">Title:</span>
+            <span class="info-value">{{ title }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Status:</span>
+            <span class="info-value" style="font-weight: 600; text-transform: uppercase;">{{ status|replace('_', ' ') }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Proposed Amount:</span>
+            <span class="info-value">${{ "%.2f"|format(proposal_amount) }}</span>
+        </div>
+        {% if approved_amount != proposal_amount %}
+        <div class="info-row">
+            <span class="info-label">Approved Amount:</span>
+            <span class="info-value" style="font-weight: 600; color: #10b981;">${{ "%.2f"|format(approved_amount) }}</span>
+        </div>
+        {% endif %}
+        <div class="info-row">
+            <span class="info-label">Response Date:</span>
+            <span class="info-value">{{ response_date }}</span>
+        </div>
+    </div>
+
+    {% if gc_notes %}
+    <div class="info-box">
+        <h3>General Contractor Notes</h3>
+        <p style="margin: 10px 0 0 0; color: #1e293b; font-style: italic;">
+            "{{ gc_notes }}"
+        </p>
+    </div>
+    {% endif %}
+
+    {% if line_items %}
+    <div class="info-box">
+        <h3>Line Item Approvals</h3>
+        {% for item in line_items %}
+        <div class="info-row">
+            <span class="info-label">{{ item.name }}</span>
+            <span class="info-value" style="color: {% if item.approved %}#10b981{% else %}#ef4444{% endif %};">
+                {% if item.approved %}✓ Approved{% else %}✗ Denied{% endif %}
+            </span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="button-container">
+        <a href="{{ ticket_link }}" class="button">
+            View Full Details
+        </a>
+    </div>
+
+    <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #64748b; text-align: center;">
+        This is an automated notification from the Change Order Management System.
+    </p>
+</div>
+{% endblock %}
