@@ -1,5 +1,6 @@
 #!/bin/sh
-set -e
+# Don't exit on error - we want nginx to start even if config injection fails
+set +e
 
 echo "🚀 ChangeOrderino Frontend - Starting..."
 
@@ -31,12 +32,22 @@ if [ -f /usr/share/nginx/html/index.html ]; then
   if ! grep -q "config.js" /usr/share/nginx/html/index.html; then
     echo "📝 Injecting config.js into index.html..."
     # Use awk for Alpine Linux compatibility (more reliable than sed with newlines)
-    awk '/<head>/ {print; print "    <script src=\"/config.js\"></script>"; next} {print}' \
-      /usr/share/nginx/html/index.html > /tmp/index.html.tmp && \
+    if awk '/<head>/ {print; print "    <script src=\"/config.js\"></script>"; next} {print}' \
+      /usr/share/nginx/html/index.html > /tmp/index.html.tmp; then
       mv /tmp/index.html.tmp /usr/share/nginx/html/index.html
-    echo "✅ config.js injected into index.html"
+      echo "✅ config.js injected into index.html"
+    else
+      echo "⚠️  Warning: Could not inject config.js, continuing anyway..."
+      rm -f /tmp/index.html.tmp
+    fi
+  else
+    echo "ℹ️  config.js already present in index.html"
   fi
+else
+  echo "⚠️  Warning: index.html not found, skipping config injection"
 fi
 
 echo "🌐 Starting nginx..."
+# Re-enable exit on error for nginx execution
+set -e
 exec "$@"
