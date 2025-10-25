@@ -46,7 +46,7 @@ export const Dashboard: React.FC = () => {
   }
 
   const pendingTickets = tickets?.filter(t => t.status === 'pending_review').length || 0;
-  const sentTickets = tickets?.filter(t => t.status === 'sent').length || 0;
+  const sentTickets = tickets?.filter(t => t.status === 'sent' || t.status === 'viewed').length || 0;
   const approvedTickets = tickets?.filter(t => t.status === 'approved').length || 0;
 
   const stats = [
