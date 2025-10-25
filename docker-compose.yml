@@ -135,6 +135,7 @@ services:
       REMINDER_ENABLED: ${REMINDER_ENABLED}
       REMINDER_INTERVAL_DAYS: ${REMINDER_INTERVAL_DAYS}
       REMINDER_MAX_RETRIES: ${REMINDER_MAX_RETRIES}
+      FRONTEND_URL: ${FRONTEND_URL}
     depends_on:
       db:
         condition: service_healthy

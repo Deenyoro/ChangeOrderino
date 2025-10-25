@@ -3,11 +3,11 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { ArrowLeft, Camera, FileText } from 'lucide-react';
+import { useNavigate, useSearchParams, useParams, Link } from 'react-router-dom';
+import { ArrowLeft, Camera, FileText, AlertCircle } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { useProjects } from '../hooks/useProjects';
-import { useCreateTNMTicket } from '../hooks/useTNMTickets';
+import { useCreateTNMTicket, useTNMTicket, useUpdateTNMTicket } from '../hooks/useTNMTickets';
 import { useAuth } from '../hooks/useAuth';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
@@ -19,7 +19,7 @@ import { EquipmentItemTable } from '../components/tnm/EquipmentItemTable';
 import { SubcontractorItemTable } from '../components/tnm/SubcontractorItemTable';
 import { StickySummaryBar } from '../components/tnm/StickySummaryBar';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
-import { TNMTicketFormData } from '../types/tnmTicket';
+import { TNMTicketFormData, TNMStatus } from '../types/tnmTicket';
 import { LaborItem, MaterialItem, EquipmentItem, SubcontractorItem } from '../types/lineItem';
 import { formatDateForInput } from '../utils/formatters';
 import {
@@ -32,12 +32,17 @@ import {
 
 export const CreateTNMPage: React.FC = () => {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const projectIdParam = searchParams.get('project_id');
 
+  const isEditMode = Boolean(id);
+
   const { user } = useAuth();
   const { data: projects, isLoading: projectsLoading } = useProjects({ is_active: true });
+  const { data: existingTicket, isLoading: ticketLoading } = useTNMTicket(id || '');
   const createMutation = useCreateTNMTicket();
+  const updateMutation = useUpdateTNMTicket();
 
   const [laborItems, setLaborItems] = useState<LaborItem[]>([]);
   const [materialItems, setMaterialItems] = useState<MaterialItem[]>([]);
@@ -71,6 +76,26 @@ export const CreateTNMPage: React.FC = () => {
       setValue('project_id', projectIdParam);
     }
   }, [projectIdParam, selectedProject, setValue]);
+
+  // Populate form with existing ticket data in edit mode
+  useEffect(() => {
+    if (isEditMode && existingTicket) {
+      setValue('project_id', existingTicket.project_id);
+      setValue('title', existingTicket.title);
+      setValue('description', existingTicket.description || '');
+      setValue('submitter_name', existingTicket.submitter_name);
+      setValue('submitter_email', existingTicket.submitter_email);
+      setValue('proposal_date', formatDateForInput(new Date(existingTicket.proposal_date)));
+
+      setSelectedProject(existingTicket.project_id);
+      setLaborItems(existingTicket.labor_items || []);
+      setMaterialItems(existingTicket.material_items || []);
+      setEquipmentItems(existingTicket.equipment_items || []);
+      setSubcontractorItems(existingTicket.subcontractor_items || []);
+      setSignature(existingTicket.signature_url || null);
+      setPhotos(existingTicket.photo_urls || []);
+    }
+  }, [isEditMode, existingTicket, setValue]);
 
   // Get selected project details
   const watchedProjectId = watch('project_id');
@@ -124,15 +149,45 @@ export const CreateTNMPage: React.FC = () => {
         photo_urls: photos.length > 0 ? photos : undefined,
       };
 
-      await createMutation.mutateAsync(formData);
-      navigate('/tnm-tickets');
+      if (isEditMode && id) {
+        await updateMutation.mutateAsync({ id, data: formData });
+        navigate(`/tnm/${id}`);
+      } else {
+        await createMutation.mutateAsync(formData);
+        navigate('/tnm-tickets');
+      }
     } catch (error) {
       // Error handled by mutation
     }
   };
 
-  if (projectsLoading) {
+  if (projectsLoading || (isEditMode && ticketLoading)) {
     return <LoadingSpinner />;
+  }
+
+  // Prevent editing tickets that aren't in editable status
+  if (isEditMode && existingTicket) {
+    const canEdit = existingTicket.status === TNMStatus.DRAFT || existingTicket.status === TNMStatus.PENDING_REVIEW;
+    if (!canEdit) {
+      return (
+        <div className="max-w-7xl mx-auto">
+          <div className="card">
+            <div className="flex items-center gap-3 text-yellow-600 mb-4">
+              <AlertCircle className="w-6 h-6" />
+              <h2 className="text-xl font-semibold">Cannot Edit Ticket</h2>
+            </div>
+            <p className="text-gray-600 mb-4">
+              This TNM ticket cannot be edited because it has a status of <strong>{existingTicket.status}</strong>.
+              Only tickets with status "draft" or "pending_review" can be edited.
+            </p>
+            <Button onClick={() => navigate(`/tnm/${id}`)}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Ticket Details
+            </Button>
+          </div>
+        </div>
+      );
+    }
   }
 
   return (
@@ -140,15 +195,20 @@ export const CreateTNMPage: React.FC = () => {
       {/* Header */}
       <div className="mb-6">
         <Link
-          to="/tnm-tickets"
+          to={isEditMode ? `/tnm/${id}` : "/tnm-tickets"}
           className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-4"
         >
           <ArrowLeft className="w-4 h-4 mr-1" />
-          Back to TNM Tickets
+          {isEditMode ? 'Back to TNM Details' : 'Back to TNM Tickets'}
         </Link>
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Create TNM Ticket</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+          {isEditMode ? 'Edit TNM Ticket' : 'Create TNM Ticket'}
+        </h1>
         <p className="mt-1 text-sm text-gray-600">
-          Fill out all sections below to create a Time & Materials ticket
+          {isEditMode
+            ? 'Update the form below to modify this Time & Materials ticket'
+            : 'Fill out all sections below to create a Time & Materials ticket'
+          }
         </p>
       </div>
 

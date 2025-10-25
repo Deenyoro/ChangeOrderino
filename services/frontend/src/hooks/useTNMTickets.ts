@@ -87,10 +87,11 @@ export const useSendTNMForApproval = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => tnmTicketsApi.sendForApproval(id),
-    onSuccess: (_, id) => {
+    mutationFn: ({ id, data }: { id: string; data: { gc_email: string; gc_name?: string; message?: string } }) =>
+      tnmTicketsApi.sendForApproval(id, data),
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['tnm-tickets'] });
-      queryClient.invalidateQueries({ queryKey: ['tnm-ticket', id] });
+      queryClient.invalidateQueries({ queryKey: ['tnm-ticket', variables.id] });
       toast.success('TNM ticket sent for approval');
     },
     onError: (error: Error) => {

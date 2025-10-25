@@ -173,6 +173,16 @@ function App() {
               }
             />
 
+            {/* Edit TNM - Admin, PM, Office Staff only (NOT foreman) */}
+            <Route
+              path="/tnm/:id/edit"
+              element={
+                <ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.PROJECT_MANAGER, UserRole.OFFICE_STAFF]}>
+                  <Layout><CreateTNMPage /></Layout>
+                </ProtectedRoute>
+              }
+            />
+
             {/* TNM Details - Admin, PM, Office Staff only (NOT foreman) */}
             <Route
               path="/tnm/:id"

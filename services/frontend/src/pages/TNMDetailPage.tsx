@@ -108,7 +108,13 @@ export const TNMDetailPage: React.FC = () => {
       toast.error('Please enter GC email address');
       return;
     }
-    await sendMutation.mutateAsync(ticket.id);
+    await sendMutation.mutateAsync({
+      id: ticket.id,
+      data: {
+        gc_email: gcEmail,
+        gc_name: project?.gc_contact_name
+      }
+    });
     setIsSendModalOpen(false);
   };
 

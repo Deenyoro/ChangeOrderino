@@ -203,7 +203,40 @@ async def create_tnm_ticket(
     return ticket
 
 
-@router.get("/{ticket_id}", response_model=TNMTicketResponse)
+# ============ SPECIFIC ROUTES (must come before generic /{ticket_id}/) ============
+
+@router.get("/number/{tnm_number}/", response_model=TNMTicketResponse)
+async def get_tnm_ticket_by_number(
+    tnm_number: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Get a TNM ticket by its TNM number"""
+    result = await db.execute(
+        select(TNMTicket)
+        .where(TNMTicket.tnm_number == tnm_number)
+        .options(
+            selectinload(TNMTicket.labor_items),
+            selectinload(TNMTicket.material_items),
+            selectinload(TNMTicket.equipment_items),
+            selectinload(TNMTicket.subcontractor_items),
+        )
+    )
+    ticket = result.scalar_one_or_none()
+
+    if not ticket:
+        raise HTTPException(status_code=404, detail=f"TNM ticket {tnm_number} not found")
+
+    return ticket
+
+
+# NOTE: All /{ticket_id}/xxx/ specific routes are defined later in the file
+# They must stay after the /number/ route but their current position works
+# because FastAPI matches the most specific path first
+
+# ============ GENERIC ROUTES (for /{ticket_id}/) ============
+
+@router.get("/{ticket_id}/", response_model=TNMTicketResponse)
 async def get_tnm_ticket(
     ticket_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -228,7 +261,7 @@ async def get_tnm_ticket(
     return ticket
 
 
-@router.put("/{ticket_id}", response_model=TNMTicketResponse)
+@router.put("/{ticket_id}/", response_model=TNMTicketResponse)
 async def update_tnm_ticket(
     ticket_id: UUID,
     ticket_data: TNMTicketUpdate,
@@ -275,7 +308,48 @@ async def update_tnm_ticket(
     return ticket
 
 
-@router.get("/{ticket_id}/pdf")
+@router.delete("/{ticket_id}/")
+async def delete_tnm_ticket(
+    ticket_id: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Delete a TNM ticket"""
+    result = await db.execute(
+        select(TNMTicket).where(TNMTicket.id == ticket_id)
+    )
+    ticket = result.scalar_one_or_none()
+
+    if not ticket:
+        raise HTTPException(status_code=404, detail="TNM ticket not found")
+
+    # Log deletion before deleting
+    await audit_service.log(
+        db=db,
+        entity_type='tnm_ticket',
+        entity_id=ticket_id,
+        action='delete',
+        user_id=UUID(current_user.sub),
+        changes={
+            'tnm_number': ticket.tnm_number,
+            'title': ticket.title,
+            'status': ticket.status.value,
+        },
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get('user-agent'),
+    )
+
+    # Delete the ticket (cascade will delete line items)
+    await db.delete(ticket)
+    await db.commit()
+
+    logger.info(f"Deleted TNM ticket {ticket.tnm_number} by {current_user.email}")
+
+    return {"success": True, "message": f"TNM ticket {ticket.tnm_number} deleted"}
+
+
+@router.get("/{ticket_id}/pdf/")
 async def get_tnm_pdf(
     ticket_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -382,7 +456,7 @@ async def get_tnm_pdf(
     )
 
 
-@router.post("/{ticket_id}/send", response_model=SendRFCOResponse)
+@router.post("/{ticket_id}/send/", response_model=SendRFCOResponse)
 async def send_rfco(
     ticket_id: UUID,
     request_data: SendRFCORequest,
@@ -498,7 +572,7 @@ async def send_rfco(
     )
 
 
-@router.post("/{ticket_id}/remind", response_model=SendRFCOResponse)
+@router.post("/{ticket_id}/remind/", response_model=SendRFCOResponse)
 async def send_reminder(
     ticket_id: UUID,
     request: Request,
@@ -606,7 +680,78 @@ async def send_reminder(
     )
 
 
-@router.patch("/{ticket_id}/manual-approval")
+@router.patch("/{ticket_id}/status/")
+async def update_ticket_status(
+    ticket_id: UUID,
+    status_data: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user),
+):
+    """
+    Update TNM ticket status
+
+    Simple endpoint to update just the status field.
+    Used for workflow transitions like DRAFT -> PENDING_REVIEW -> READY_TO_SEND.
+    """
+    # Fetch ticket
+    result = await db.execute(
+        select(TNMTicket).where(TNMTicket.id == ticket_id)
+    )
+    ticket = result.scalar_one_or_none()
+
+    if not ticket:
+        raise HTTPException(status_code=404, detail="TNM ticket not found")
+
+    # Get new status
+    new_status_value = status_data.get('status')
+    if not new_status_value:
+        raise HTTPException(status_code=400, detail="Status field is required")
+
+    # Convert string to enum
+    try:
+        new_status = TNMStatus(new_status_value)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid status: {new_status_value}. Must be one of: {[s.value for s in TNMStatus]}"
+        )
+
+    # Store old status
+    old_status = ticket.status
+
+    # Update status
+    ticket.status = new_status
+
+    # Log status change
+    await audit_service.log(
+        db=db,
+        entity_type='tnm_ticket',
+        entity_id=ticket_id,
+        action='status_change',
+        user_id=UUID(current_user.sub),
+        changes={
+            'status': {'old': old_status.value, 'new': new_status.value},
+        },
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get('user-agent'),
+    )
+
+    await db.commit()
+    await db.refresh(ticket)
+
+    # Load relationships for response
+    await db.refresh(ticket, ["labor_items", "material_items", "equipment_items", "subcontractor_items"])
+
+    logger.info(
+        f"Status updated for ticket {ticket.tnm_number}: "
+        f"{old_status.value} → {new_status.value} by {current_user.email}"
+    )
+
+    return ticket
+
+
+@router.patch("/{ticket_id}/manual-approval/")
 async def manual_approval_override(
     ticket_id: UUID,
     approval_data: ManualApprovalRequest,

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 from pydantic import BaseModel
 
@@ -41,7 +41,7 @@ class ApprovalSubmitRequest(BaseModel):
 
 # ============ ENDPOINTS ============
 
-@router.get("/{token}")
+@router.get("/{token}/")
 async def verify_approval_link(
     token: str,
     request: Request,
@@ -79,21 +79,21 @@ async def verify_approval_link(
             raise HTTPException(status_code=400, detail="Invalid token")
 
         # Check if expired
-        if ticket.approval_token_expires_at < datetime.utcnow():
+        if ticket.approval_token_expires_at < datetime.now(timezone.utc):
             raise HTTPException(status_code=400, detail="Token has expired")
 
         # Check if already responded
         already_responded = ticket.status in [
-            TNMStatus.APPROVED,
-            TNMStatus.DENIED,
-            TNMStatus.PARTIALLY_APPROVED
+            TNMStatus.approved,
+            TNMStatus.denied,
+            TNMStatus.partially_approved
         ]
 
         # Record view
         if not ticket.viewed_at:
             old_status = ticket.status
-            ticket.viewed_at = datetime.utcnow()
-            ticket.status = TNMStatus.VIEWED
+            ticket.viewed_at = datetime.now(timezone.utc)
+            ticket.status = TNMStatus.viewed
 
             # Log view action (no user_id for GC)
             await audit_service.log(
@@ -121,10 +121,6 @@ async def verify_approval_link(
                 "rfco_number": ticket.rfco_number,
                 "title": ticket.title,
                 "description": ticket.description,
-                "project": {
-                    "name": ticket.project.name,
-                    "project_number": ticket.project.project_number,
-                },
                 "proposal_date": ticket.proposal_date.isoformat(),
                 "proposal_amount": float(ticket.proposal_amount),
                 "labor_items": [
@@ -174,6 +170,13 @@ async def verify_approval_link(
                 "equipment_total": float(ticket.equipment_total),
                 "subcontractor_total": float(ticket.subcontractor_total),
             },
+            "project": {
+                "id": str(ticket.project.id),
+                "name": ticket.project.name,
+                "project_number": ticket.project.project_number,
+                "customer_company": ticket.project.customer_company,
+                "gc_company": ticket.project.gc_company,
+            },
             "expires_at": ticket.approval_token_expires_at.isoformat(),
             "already_responded": already_responded,
         }
@@ -187,7 +190,7 @@ async def verify_approval_link(
         }
 
 
-@router.post("/{token}/submit")
+@router.post("/{token}/submit/")
 async def submit_approval(
     token: str,
     approval: ApprovalSubmitRequest,
@@ -223,7 +226,7 @@ async def submit_approval(
         raise HTTPException(status_code=400, detail="Invalid token")
 
     # Check if already responded
-    if ticket.status in [TNMStatus.APPROVED, TNMStatus.DENIED, TNMStatus.PARTIALLY_APPROVED]:
+    if ticket.status in [TNMStatus.approved, TNMStatus.denied, TNMStatus.partially_approved]:
         raise HTTPException(
             status_code=400,
             detail="This RFCO has already been responded to"
@@ -246,7 +249,7 @@ async def submit_approval(
             status=ApprovalStatus.approved if item_approval.status == 'approved' else ApprovalStatus.denied,
             approved_amount=item_approval.approved_amount,
             gc_comment=item_approval.comment,
-            approved_at=datetime.utcnow(),
+            approved_at=datetime.now(timezone.utc),
             approved_by=approval.gc_name,
         )
         db.add(approval_record)
@@ -258,18 +261,18 @@ async def submit_approval(
             denied_count += 1
 
     # Update ticket
-    ticket.response_date = datetime.utcnow().date()
+    ticket.response_date = datetime.now(timezone.utc).date()
     ticket.approved_amount = total_approved_amount
 
     # Determine final status
     if approval.decision == 'approve_all' or (approved_count > 0 and denied_count == 0):
-        ticket.status = TNMStatus.APPROVED
+        ticket.status = TNMStatus.approved
         action = 'approve'
     elif approval.decision == 'deny_all' or (denied_count > 0 and approved_count == 0):
-        ticket.status = TNMStatus.DENIED
+        ticket.status = TNMStatus.denied
         action = 'deny'
     else:
-        ticket.status = TNMStatus.PARTIALLY_APPROVED
+        ticket.status = TNMStatus.partially_approved
         action = 'partial_approve'
 
     # Log approval/denial (no user_id for GC)

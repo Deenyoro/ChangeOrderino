@@ -191,8 +191,8 @@ async def update_ticket_email_tracking(
             ticket.email_sent_count = (ticket.email_sent_count or 0) + 1
             ticket.last_email_sent_at = current_time
             # Update status from ready_to_send to sent
-            if ticket.status == TNMStatus.READY_TO_SEND:
-                ticket.status = TNMStatus.SENT
+            if ticket.status == TNMStatus.ready_to_send:
+                ticket.status = TNMStatus.sent
 
         ticket.updated_at = current_time
 
@@ -251,7 +251,7 @@ async def _send_rfco_email_async(
             project_dict = model_to_dict(project)
 
             # Build approval link
-            approval_link = f"{config.API_BASE_URL}/approve/{approval_token}"
+            approval_link = f"{config.FRONTEND_URL}/approve/{approval_token}"
 
             # Fetch company logo URL
             company_logo_url = await get_company_logo_url(session)
@@ -347,7 +347,7 @@ async def _send_reminder_email_async(
             ticket, project = data
 
             # Check if ticket is still pending (don't send reminder if already approved/denied)
-            if ticket.status not in [TNMStatus.SENT, TNMStatus.VIEWED]:
+            if ticket.status not in [TNMStatus.sent, TNMStatus.viewed]:
                 logger.info(
                     f"Ticket {tnm_ticket_id} status is {ticket.status.value}, "
                     f"skipping reminder (already resolved)"
@@ -363,7 +363,7 @@ async def _send_reminder_email_async(
             days_pending = (datetime.now(timezone.utc) - created_at).days
 
             # Build approval link
-            approval_link = f"{config.API_BASE_URL}/approve/{approval_token}"
+            approval_link = f"{config.FRONTEND_URL}/approve/{approval_token}"
 
             # Fetch company logo URL
             company_logo_url = await get_company_logo_url(session)

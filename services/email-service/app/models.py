@@ -10,15 +10,15 @@ Base = declarative_base()
 
 class TNMStatus(str, enum.Enum):
     """TNM Ticket status"""
-    DRAFT = "draft"
-    PENDING_REVIEW = "pending_review"
-    READY_TO_SEND = "ready_to_send"
-    SENT = "sent"
-    VIEWED = "viewed"
-    PARTIALLY_APPROVED = "partially_approved"
-    APPROVED = "approved"
-    DENIED = "denied"
-    CANCELLED = "cancelled"
+    draft = "draft"
+    pending_review = "pending_review"
+    ready_to_send = "ready_to_send"
+    sent = "sent"
+    viewed = "viewed"
+    partially_approved = "partially_approved"
+    approved = "approved"
+    denied = "denied"
+    cancelled = "cancelled"
 
 
 class Project(Base):
@@ -48,7 +48,7 @@ class Project(Base):
 
     is_active = Column(Boolean, default=True, index=True)
     notes = Column(Text)
-    metadata = Column(JSONB, default={})
+    extra_metadata = Column(JSONB, default={})
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
@@ -83,7 +83,7 @@ class TNMTicket(Base):
     response_date = Column(Date)
 
     # Status
-    status = Column(SQLEnum(TNMStatus), nullable=False, default=TNMStatus.DRAFT, index=True)
+    status = Column(SQLEnum(TNMStatus), nullable=False, default=TNMStatus.draft, index=True)
 
     # Calculated totals
     labor_subtotal = Column(Numeric(12, 2), default=0.00)
@@ -121,13 +121,39 @@ class TNMTicket(Base):
     viewed_at = Column(DateTime(timezone=True))
 
     notes = Column(Text)
-    metadata = Column(JSONB, default={})
+    extra_metadata = Column(JSONB, default={})
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     # Relationships
     project = relationship("Project", back_populates="tnm_tickets")
+
+
+class AppSettings(Base):
+    """Global application settings stored in database"""
+    __tablename__ = "app_settings"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    key = Column(String(255), unique=True, nullable=False, index=True)
+    value = Column(Text, nullable=False)
+    category = Column(String(100), nullable=False, index=True)
+    description = Column(Text)
+    data_type = Column(String(50), nullable=False)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    def get_typed_value(self):
+        """Convert string value to appropriate Python type"""
+        if self.data_type == "boolean":
+            return self.value.lower() in ("true", "1", "yes", "on")
+        elif self.data_type == "integer":
+            return int(self.value)
+        elif self.data_type == "float":
+            return float(self.value)
+        else:
+            return self.value
 
 
 class EmailLog(Base):

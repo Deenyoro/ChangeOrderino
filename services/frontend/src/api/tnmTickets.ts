@@ -56,8 +56,8 @@ export const tnmTicketsApi = {
   },
 
   // Send for approval
-  sendForApproval: async (id: string) => {
-    const response = await apiClient.post<TNMTicket>(`v1/tnm-tickets/${id}/send/`);
+  sendForApproval: async (id: string, data: { gc_email: string; gc_name?: string; message?: string }) => {
+    const response = await apiClient.post<TNMTicket>(`v1/tnm-tickets/${id}/send/`, data);
     return response.data;
   },
 

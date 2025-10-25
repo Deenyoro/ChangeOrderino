@@ -37,8 +37,9 @@ class Config:
     # Environment
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
 
-    # API URL (for generating approval links)
-    API_BASE_URL: str = os.getenv("API_BASE_URL", "http://localhost:3000")
+    # Frontend URL (for generating approval links)
+    # This should be the public-facing URL where users access the frontend
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost")
 
     # Queue Configuration
     QUEUE_NAME: str = "email_queue"
