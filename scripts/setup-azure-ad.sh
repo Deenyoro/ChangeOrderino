@@ -29,9 +29,13 @@ if [ -z "$AZURE_TENANT_ID" ] || [ -z "$AZURE_CLIENT_ID" ] || [ -z "$AZURE_CLIENT
 fi
 
 echo "Step 1: Getting Keycloak admin token..."
+
+# Get admin password from .env file
+ADMIN_PASSWORD=$(grep "^KEYCLOAK_ADMIN_PASSWORD=" .env | cut -d '=' -f2)
+
 TOKEN=$(docker compose exec -T api curl -s -X POST "http://keycloak:8080/realms/master/protocol/openid-connect/token" \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=admin&password=admin&grant_type=password&client_id=admin-cli" | python3 -c "import sys, json; print(json.load(sys.stdin)['access_token'])")
+  -d "username=admin&password=$ADMIN_PASSWORD&grant_type=password&client_id=admin-cli" | python3 -c "import sys, json; print(json.load(sys.stdin)['access_token'])")
 
 if [ -z "$TOKEN" ]; then
   echo "❌ Failed to get admin token"
