@@ -16,7 +16,7 @@ export const approvalsApi = {
   getApprovalData: async (token: string) => {
     const baseURL = getApiBaseUrl();
     const response = await axios.get<ApprovalPageData>(
-      `${baseURL}/v1/approvals/${token}`
+      `${baseURL}/v1/approvals/${token}/`
     );
     return response.data;
   },
@@ -25,7 +25,7 @@ export const approvalsApi = {
   submitApproval: async (token: string, data: ApprovalSubmission) => {
     const baseURL = getApiBaseUrl();
     const response = await axios.post(
-      `${baseURL}/v1/approvals/${token}/submit`,
+      `${baseURL}/v1/approvals/${token}/submit/`,
       data
     );
     return response.data;

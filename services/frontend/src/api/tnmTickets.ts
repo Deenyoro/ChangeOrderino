@@ -14,42 +14,42 @@ export const tnmTicketsApi = {
     from_date?: string;
     to_date?: string;
   }) => {
-    const response = await apiClient.get<TNMTicket[]>('v1/tnm-tickets', { params });
+    const response = await apiClient.get<TNMTicket[]>('v1/tnm-tickets/', { params });
     return response.data;
   },
 
   // Get single TNM ticket
   getById: async (id: string) => {
-    const response = await apiClient.get<TNMTicket>(`v1/tnm-tickets/${id}`);
+    const response = await apiClient.get<TNMTicket>(`v1/tnm-tickets/${id}/`);
     return response.data;
   },
 
   // Get TNM ticket by number
   getByNumber: async (tnmNumber: string) => {
-    const response = await apiClient.get<TNMTicket>(`v1/tnm-tickets/number/${tnmNumber}`);
+    const response = await apiClient.get<TNMTicket>(`v1/tnm-tickets/number/${tnmNumber}/`);
     return response.data;
   },
 
   // Create TNM ticket
   create: async (data: TNMTicketFormData) => {
-    const response = await apiClient.post<TNMTicket>('v1/tnm-tickets', data);
+    const response = await apiClient.post<TNMTicket>('v1/tnm-tickets/', data);
     return response.data;
   },
 
   // Update TNM ticket
   update: async (id: string, data: Partial<TNMTicketFormData>) => {
-    const response = await apiClient.put<TNMTicket>(`v1/tnm-tickets/${id}`, data);
+    const response = await apiClient.put<TNMTicket>(`v1/tnm-tickets/${id}/`, data);
     return response.data;
   },
 
   // Delete TNM ticket
   delete: async (id: string) => {
-    await apiClient.delete(`v1/tnm-tickets/${id}`);
+    await apiClient.delete(`v1/tnm-tickets/${id}/`);
   },
 
   // Update status
   updateStatus: async (id: string, status: TNMStatus) => {
-    const response = await apiClient.patch<TNMTicket>(`v1/tnm-tickets/${id}/status`, {
+    const response = await apiClient.patch<TNMTicket>(`v1/tnm-tickets/${id}/status/`, {
       status,
     });
     return response.data;
@@ -57,13 +57,13 @@ export const tnmTicketsApi = {
 
   // Send for approval
   sendForApproval: async (id: string) => {
-    const response = await apiClient.post<TNMTicket>(`v1/tnm-tickets/${id}/send`);
+    const response = await apiClient.post<TNMTicket>(`v1/tnm-tickets/${id}/send/`);
     return response.data;
   },
 
   // Generate PDF
   generatePDF: async (id: string) => {
-    const response = await apiClient.get(`v1/tnm-tickets/${id}/pdf`, {
+    const response = await apiClient.get(`v1/tnm-tickets/${id}/pdf/`, {
       responseType: 'blob',
     });
     return response.data;
@@ -71,7 +71,7 @@ export const tnmTicketsApi = {
 
   // Send reminder
   sendReminder: async (id: string) => {
-    const response = await apiClient.post<any>(`v1/tnm-tickets/${id}/remind`);
+    const response = await apiClient.post<any>(`v1/tnm-tickets/${id}/remind/`);
     return response.data;
   },
 
@@ -85,7 +85,7 @@ export const tnmTicketsApi = {
       notes?: string;
     }
   ) => {
-    const response = await apiClient.patch<any>(`v1/tnm-tickets/${id}/manual-approval`, data);
+    const response = await apiClient.patch<any>(`v1/tnm-tickets/${id}/manual-approval/`, data);
     return response.data;
   },
 };

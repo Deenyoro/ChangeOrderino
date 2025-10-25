@@ -13,7 +13,7 @@ export const assetsApi = {
     formData.append('tnm_ticket_id', tnmTicketId);
     formData.append('asset_type', 'signature');
 
-    const response = await apiClient.post<UploadResponse>('v1/assets/upload', formData, {
+    const response = await apiClient.post<UploadResponse>('v1/assets/upload/', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -28,7 +28,7 @@ export const assetsApi = {
     formData.append('tnm_ticket_id', tnmTicketId);
     formData.append('asset_type', 'photo');
 
-    const response = await apiClient.post<UploadResponse>('v1/assets/upload', formData, {
+    const response = await apiClient.post<UploadResponse>('v1/assets/upload/', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -38,6 +38,6 @@ export const assetsApi = {
 
   // Delete asset
   deleteAsset: async (assetId: string) => {
-    await apiClient.delete(`v1/assets/${assetId}`);
+    await apiClient.delete(`v1/assets/${assetId}/`);
   },
 };
