@@ -4,14 +4,16 @@
 
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { AppDispatch, RootState } from '../store';
 import { fetchGlobalSettings, updateGlobalSetting, clearError } from '../store/slices/settingsSlice';
 import { AppSetting } from '../types/settings';
-import { Upload } from 'lucide-react';
+import { Upload, Activity } from 'lucide-react';
 import { apiClient } from '../api/client';
 
 const SettingsPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
   const { globalSettings, loading, error, lastUpdated } = useSelector(
     (state: RootState) => state.settings
   );
@@ -226,7 +228,16 @@ const SettingsPage: React.FC = () => {
     <div className="max-w-6xl mx-auto p-6">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Application Settings</h1>
+        <div className="flex justify-between items-start mb-2">
+          <h1 className="text-3xl font-bold text-gray-900">Application Settings</h1>
+          <button
+            onClick={() => navigate('/system-info')}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Activity className="w-5 h-5" />
+            System Information
+          </button>
+        </div>
         <p className="text-gray-600">
           Configure global application settings. Database is the source of truth.
         </p>

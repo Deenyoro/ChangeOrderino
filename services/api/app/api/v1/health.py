@@ -10,6 +10,65 @@ from app.core.config import settings
 router = APIRouter()
 
 
+async def check_database_health(db: AsyncSession):
+    """Check database connectivity"""
+    try:
+        result = await db.execute(text("SELECT version()"))
+        version = result.scalar()
+        return {
+            "status": "healthy",
+            "version": version.split()[1] if version else "unknown"
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "error": str(e)
+        }
+
+
+async def check_redis_health():
+    """Check Redis connectivity"""
+    try:
+        import redis
+        r = redis.from_url(settings.REDIS_URL, decode_responses=True)
+        r.ping()
+        info = r.info('server')
+        return {
+            "status": "healthy",
+            "version": info.get('redis_version', 'unknown')
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "error": str(e)
+        }
+
+
+async def check_minio_health():
+    """Check MinIO connectivity"""
+    try:
+        from minio import Minio
+        # Strip protocol from URL (Minio client expects just host:port)
+        minio_endpoint = settings.MINIO_SERVER_URL.replace('http://', '').replace('https://', '')
+        client = Minio(
+            minio_endpoint,
+            access_key=settings.MINIO_ROOT_USER,
+            secret_key=settings.MINIO_ROOT_PASSWORD,
+            secure=settings.MINIO_SECURE
+        )
+        # Check if bucket exists
+        exists = client.bucket_exists(settings.MINIO_BUCKET_NAME)
+        return {
+            "status": "healthy" if exists else "warning",
+            "bucket_exists": exists
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "error": str(e)
+        }
+
+
 @router.get("/health")
 async def health_check():
     """Basic health check"""
@@ -18,6 +77,36 @@ async def health_check():
         "service": settings.APP_NAME,
         "version": settings.VERSION,
         "environment": settings.ENVIRONMENT
+    }
+
+
+@router.get("/health/detailed")
+async def detailed_health_check(db: AsyncSession = Depends(get_db)):
+    """Detailed health check with service status"""
+    db_health = await check_database_health(db)
+    redis_health = await check_redis_health()
+    minio_health = await check_minio_health()
+
+    # Overall status is healthy only if all services are healthy
+    all_healthy = all(
+        service["status"] == "healthy"
+        for service in [db_health, redis_health, minio_health]
+    )
+
+    return {
+        "status": "healthy" if all_healthy else "unhealthy",
+        "version": settings.VERSION,
+        "environment": settings.ENVIRONMENT,
+        "services": {
+            "database": db_health,
+            "redis": redis_health,
+            "minio": minio_health
+        },
+        "system_info": {
+            "application": settings.APP_NAME,
+            "database_version": f"PostgreSQL {db_health.get('version', 'unknown')}",
+            "redis_version": f"Redis {redis_health.get('version', 'unknown')}"
+        }
     }
 
 

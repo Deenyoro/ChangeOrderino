@@ -26,6 +26,8 @@ import { TNMDetailPage } from './pages/TNMDetailPage';
 import { GCApprovalPage } from './pages/GCApprovalPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import SettingsPage from './pages/SettingsPage';
+import SystemInfoPage from './pages/SystemInfoPage';
+import { HelpPage } from './pages/HelpPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -199,6 +201,26 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
                   <Layout><SettingsPage /></Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* System Information - Admin only */}
+            <Route
+              path="/system-info"
+              element={
+                <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
+                  <Layout><SystemInfoPage /></Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Help & Support - All authenticated users */}
+            <Route
+              path="/help"
+              element={
+                <ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.PROJECT_MANAGER, UserRole.OFFICE_STAFF, UserRole.FOREMAN]}>
+                  <Layout><HelpPage /></Layout>
                 </ProtectedRoute>
               }
             />

@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, FolderKanban, FileText, Settings, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, FolderKanban, FileText, Settings, HelpCircle, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../../store';
 import { setSidebarOpen, toggleSidebarCollapsed } from '../../store/slices/uiSlice';
@@ -16,6 +16,7 @@ const navigation = [
   { name: 'TNM Tickets', href: '/tnm-tickets', icon: FileText, roles: ['admin', 'office_staff', 'project_manager'] },
   { name: 'Create TNM', href: '/tnm/create', icon: FileText, roles: ['foreman', 'admin', 'office_staff', 'project_manager'] },
   { name: 'Settings', href: '/settings', icon: Settings, roles: ['admin'] },
+  { name: 'Help', href: '/help', icon: HelpCircle, roles: ['admin', 'office_staff', 'project_manager', 'foreman'] },
 ];
 
 export const Sidebar: React.FC = () => {
