@@ -95,6 +95,11 @@ class KeycloakClient:
                         payload["resource_access"][settings.KEYCLOAK_CLIENT_ID].get("roles", [])
                     )
 
+            # Auto-assign default "foreman" role to any authenticated user without specific roles
+            # This allows all TRE employees to create TNM forms without manual role assignment
+            if not roles:
+                roles = ["foreman"]
+
             return TokenData(
                 sub=payload.get("sub"),
                 email=payload.get("email"),

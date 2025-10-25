@@ -86,11 +86,15 @@ function App() {
             .filter((role: string) => Object.values(UserRole).includes(role as UserRole))
             .map((role: string) => role as UserRole);
 
+          // Auto-assign foreman role to any authenticated user without specific roles
+          // This allows all TRE employees to create TNM forms without manual role assignment
+          const finalRoles = mappedRoles.length > 0 ? mappedRoles : [UserRole.FOREMAN];
+
           const user = {
             id: userInfo?.sub || '',
             email: userInfo?.email || '',
             full_name: userInfo?.name || userInfo?.preferred_username || '',
-            roles: mappedRoles,
+            roles: finalRoles,
             keycloak_id: userInfo?.sub || '',
             is_active: true,
             created_at: new Date().toISOString(),
