@@ -2,7 +2,7 @@
  * Help & Support Page with Zammad integration
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { AlertCircle, HelpCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { projectsApi } from '../api/projects';
@@ -147,16 +147,7 @@ export const HelpPage: React.FC = () => {
     collectTelemetry();
   }, [hostname, user]);
 
-  // Store telemetry in sessionStorage when it's collected
-  useEffect(() => {
-    if (telemetryData) {
-      const telemetryReport = generateTelemetryReport();
-      sessionStorage.setItem('changeorderino_telemetry', telemetryReport);
-      sessionStorage.setItem('changeorderino_hostname', hostname);
-    }
-  }, [telemetryData, hostname]);
-
-  const generateTelemetryReport = () => {
+  const generateTelemetryReport = useCallback(() => {
     if (!telemetryData) return 'Telemetry data not available';
 
     let report = '\n\n------- SYSTEM TELEMETRY -------\n\n';
@@ -252,7 +243,16 @@ export const HelpPage: React.FC = () => {
     report += '------- END TELEMETRY -------\n';
 
     return report;
-  };
+  }, [telemetryData]);
+
+  // Store telemetry in sessionStorage when it's collected
+  useEffect(() => {
+    if (telemetryData) {
+      const telemetryReport = generateTelemetryReport();
+      sessionStorage.setItem('changeorderino_telemetry', telemetryReport);
+      sessionStorage.setItem('changeorderino_hostname', hostname);
+    }
+  }, [telemetryData, hostname, generateTelemetryReport]);
 
   // Load scripts once on mount
   useEffect(() => {
