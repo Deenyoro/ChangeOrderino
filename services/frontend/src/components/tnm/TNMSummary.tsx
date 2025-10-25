@@ -9,8 +9,6 @@ import {
   calculateMaterialTotal,
   calculateEquipmentTotal,
   calculateSubcontractorTotal,
-  calculateTotalWithOHP,
-  calculateProposalAmount,
 } from '../../utils/calculations';
 import { LaborItem, MaterialItem, EquipmentItem, SubcontractorItem } from '../../types/lineItem';
 
@@ -37,29 +35,48 @@ export const TNMSummary: React.FC<TNMSummaryProps> = ({
   subcontractorOHP,
   className = '',
 }) => {
-  // Calculate subtotals
-  const laborSubtotal = calculateLaborTotal(laborItems);
-  const materialSubtotal = calculateMaterialTotal(materialItems);
-  const equipmentSubtotal = calculateEquipmentTotal(equipmentItems);
-  const subcontractorSubtotal = calculateSubcontractorTotal(subcontractorItems);
+  // Helper function to safely convert to number
+  const toNumber = (val: any): number => {
+    const num = Number(val);
+    return Number.isFinite(num) ? num : 0;
+  };
 
-  // Calculate totals with OH&P
-  const laborTotal = calculateTotalWithOHP(laborSubtotal, laborOHP);
-  const materialTotal = calculateTotalWithOHP(materialSubtotal, materialOHP);
-  const equipmentTotal = calculateTotalWithOHP(equipmentSubtotal, equipmentOHP);
-  const subcontractorTotal = calculateTotalWithOHP(subcontractorSubtotal, subcontractorOHP);
+  // Ensure all OHP values are valid numbers
+  const safeLaborOHP = toNumber(laborOHP);
+  const safeMaterialOHP = toNumber(materialOHP);
+  const safeEquipmentOHP = toNumber(equipmentOHP);
+  const safeSubcontractorOHP = toNumber(subcontractorOHP);
+
+  // Calculate subtotals - ensure they're valid numbers
+  const laborSubtotal = toNumber(calculateLaborTotal(laborItems));
+  const materialSubtotal = toNumber(calculateMaterialTotal(materialItems));
+  const equipmentSubtotal = toNumber(calculateEquipmentTotal(equipmentItems));
+  const subcontractorSubtotal = toNumber(calculateSubcontractorTotal(subcontractorItems));
+
+  // Calculate OH&P amounts safely
+  const laborOHPAmount = toNumber(laborSubtotal * (safeLaborOHP / 100));
+  const materialOHPAmount = toNumber(materialSubtotal * (safeMaterialOHP / 100));
+  const equipmentOHPAmount = toNumber(equipmentSubtotal * (safeEquipmentOHP / 100));
+  const subcontractorOHPAmount = toNumber(subcontractorSubtotal * (safeSubcontractorOHP / 100));
+
+  // Calculate totals
+  const laborTotal = toNumber(laborSubtotal + laborOHPAmount);
+  const materialTotal = toNumber(materialSubtotal + materialOHPAmount);
+  const equipmentTotal = toNumber(equipmentSubtotal + equipmentOHPAmount);
+  const subcontractorTotal = toNumber(subcontractorSubtotal + subcontractorOHPAmount);
 
   // Calculate grand total
-  const proposalAmount = calculateProposalAmount(
-    laborSubtotal,
-    laborOHP,
-    materialSubtotal,
-    materialOHP,
-    equipmentSubtotal,
-    equipmentOHP,
-    subcontractorSubtotal,
-    subcontractorOHP
-  );
+  const proposalAmount = toNumber(laborTotal + materialTotal + equipmentTotal + subcontractorTotal);
+
+  // Log for debugging
+  console.log('TNMSummary Debug:', {
+    inputs: { laborOHP, materialOHP, equipmentOHP, subcontractorOHP },
+    safe: { safeLaborOHP, safeMaterialOHP, safeEquipmentOHP, safeSubcontractorOHP },
+    subtotals: { laborSubtotal, materialSubtotal, equipmentSubtotal, subcontractorSubtotal },
+    ohpAmounts: { laborOHPAmount, materialOHPAmount, equipmentOHPAmount, subcontractorOHPAmount },
+    totals: { laborTotal, materialTotal, equipmentTotal, subcontractorTotal },
+    proposalAmount
+  });
 
   return (
     <div className={`card bg-gradient-to-br from-primary-50 to-blue-50 ${className}`}>
@@ -73,8 +90,8 @@ export const TNMSummary: React.FC<TNMSummaryProps> = ({
             <span className="text-gray-900">{formatCurrency(laborSubtotal)}</span>
           </div>
           <div className="flex justify-between items-center text-sm text-gray-600 pl-4">
-            <span>OH&P ({laborOHP}%)</span>
-            <span>{formatCurrency(laborTotal - laborSubtotal)}</span>
+            <span>OH&P ({safeLaborOHP.toFixed(2)}%)</span>
+            <span>{formatCurrency(laborOHPAmount)}</span>
           </div>
           <div className="flex justify-between items-center font-semibold text-gray-900 mt-1 pt-1 border-t border-gray-200">
             <span>Labor Total</span>
@@ -89,8 +106,8 @@ export const TNMSummary: React.FC<TNMSummaryProps> = ({
             <span className="text-gray-900">{formatCurrency(materialSubtotal)}</span>
           </div>
           <div className="flex justify-between items-center text-sm text-gray-600 pl-4">
-            <span>OH&P ({materialOHP}%)</span>
-            <span>{formatCurrency(materialTotal - materialSubtotal)}</span>
+            <span>OH&P ({safeMaterialOHP.toFixed(2)}%)</span>
+            <span>{formatCurrency(materialOHPAmount)}</span>
           </div>
           <div className="flex justify-between items-center font-semibold text-gray-900 mt-1 pt-1 border-t border-gray-200">
             <span>Material Total</span>
@@ -105,8 +122,8 @@ export const TNMSummary: React.FC<TNMSummaryProps> = ({
             <span className="text-gray-900">{formatCurrency(equipmentSubtotal)}</span>
           </div>
           <div className="flex justify-between items-center text-sm text-gray-600 pl-4">
-            <span>OH&P ({equipmentOHP}%)</span>
-            <span>{formatCurrency(equipmentTotal - equipmentSubtotal)}</span>
+            <span>OH&P ({safeEquipmentOHP.toFixed(2)}%)</span>
+            <span>{formatCurrency(equipmentOHPAmount)}</span>
           </div>
           <div className="flex justify-between items-center font-semibold text-gray-900 mt-1 pt-1 border-t border-gray-200">
             <span>Equipment Total</span>
@@ -121,8 +138,8 @@ export const TNMSummary: React.FC<TNMSummaryProps> = ({
             <span className="text-gray-900">{formatCurrency(subcontractorSubtotal)}</span>
           </div>
           <div className="flex justify-between items-center text-sm text-gray-600 pl-4">
-            <span>OH&P ({subcontractorOHP}%)</span>
-            <span>{formatCurrency(subcontractorTotal - subcontractorSubtotal)}</span>
+            <span>OH&P ({safeSubcontractorOHP.toFixed(2)}%)</span>
+            <span>{formatCurrency(subcontractorOHPAmount)}</span>
           </div>
           <div className="flex justify-between items-center font-semibold text-gray-900 mt-1 pt-1 border-t border-gray-200">
             <span>Subcontractor Total</span>

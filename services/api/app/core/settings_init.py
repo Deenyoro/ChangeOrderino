@@ -56,6 +56,13 @@ async def initialize_settings_from_env(db: AsyncSession) -> None:
             "data_type": "string",
             "description": "Timezone (e.g., America/New_York)"
         },
+        {
+            "key": "COMPANY_LOGO_URL",
+            "value": "",
+            "category": "company",
+            "data_type": "string",
+            "description": "Company logo URL (uploaded to MinIO)"
+        },
 
         # SMTP Settings
         {

@@ -372,20 +372,20 @@ export const TNMDetailPage: React.FC = () => {
             <SubcontractorItemTable items={ticket.subcontractor_items} onChange={() => {}} readonly />
           </div>
         )}
-      </div>
 
-      {/* Summary */}
-      <div className="lg:fixed lg:top-20 lg:right-8 lg:w-96">
-        <TNMSummary
-          laborItems={ticket.labor_items || []}
-          materialItems={ticket.material_items || []}
-          equipmentItems={ticket.equipment_items || []}
-          subcontractorItems={ticket.subcontractor_items || []}
-          laborOHP={ticket.labor_ohp_percent}
-          materialOHP={ticket.material_ohp_percent}
-          equipmentOHP={ticket.equipment_ohp_percent}
-          subcontractorOHP={ticket.subcontractor_ohp_percent}
-        />
+        {/* Summary - Moved to bottom of page */}
+        <div className="card">
+          <TNMSummary
+            laborItems={ticket.labor_items || []}
+            materialItems={ticket.material_items || []}
+            equipmentItems={ticket.equipment_items || []}
+            subcontractorItems={ticket.subcontractor_items || []}
+            laborOHP={Number(ticket.labor_ohp_percent) || 0}
+            materialOHP={Number(ticket.material_ohp_percent) || 0}
+            equipmentOHP={Number(ticket.equipment_ohp_percent) || 0}
+            subcontractorOHP={Number(ticket.subcontractor_ohp_percent) || 0}
+          />
+        </div>
       </div>
 
       {/* Signature & Photos */}

@@ -44,6 +44,7 @@ class CompanySettings(BaseModel):
     email: EmailStr
     phone: str
     timezone: str
+    logo_url: Optional[str] = None
 
 
 class SMTPSettings(BaseModel):

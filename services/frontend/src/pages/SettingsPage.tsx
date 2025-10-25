@@ -7,6 +7,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../store';
 import { fetchGlobalSettings, updateGlobalSetting, clearError } from '../store/slices/settingsSlice';
 import { AppSetting } from '../types/settings';
+import { Upload } from 'lucide-react';
+import { apiClient } from '../api/client';
 
 const SettingsPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -17,10 +19,72 @@ const SettingsPage: React.FC = () => {
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>('');
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   useEffect(() => {
     dispatch(fetchGlobalSettings());
   }, [dispatch]);
+
+  const currentLogoUrl = globalSettings.find(s => s.key === 'COMPANY_LOGO_URL')?.value;
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.match(/^image\/(png|svg\+xml)$/)) {
+      alert('Only PNG and SVG files are allowed');
+      return;
+    }
+
+    // Validate file size (10MB max)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File size must be less than 10MB');
+      return;
+    }
+
+    setLogoFile(file);
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setLogoPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleLogoUpload = async () => {
+    if (!logoFile) return;
+
+    setUploadingLogo(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', logoFile);
+
+      await apiClient.post('/v1/settings/logo', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      setSaveMessage('✓ Logo uploaded successfully');
+      setTimeout(() => setSaveMessage(null), 3000);
+
+      // Refresh settings to get the new logo URL
+      dispatch(fetchGlobalSettings());
+
+      // Clear the preview and file
+      setLogoFile(null);
+      setLogoPreview(null);
+    } catch (err: any) {
+      console.error('Failed to upload logo:', err);
+      alert(err.response?.data?.detail || 'Failed to upload logo');
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
 
   const handleEdit = (setting: AppSetting) => {
     setEditingKey(setting.key);
@@ -192,6 +256,79 @@ const SettingsPage: React.FC = () => {
           </button>
         </div>
       )}
+
+      {/* Logo Upload Section */}
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">Company Logo</h2>
+        <p className="text-gray-600 mb-4">Upload your company logo (PNG or SVG). This will be displayed in emails and documents.</p>
+        <div className="bg-white shadow rounded-lg p-6">
+          <div className="flex items-start space-x-6">
+            {/* Current Logo Display */}
+            <div className="flex-shrink-0">
+              <div className="w-48 h-48 border-2 border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
+                {currentLogoUrl && !logoPreview ? (
+                  <img src={currentLogoUrl} alt="Company Logo" className="max-w-full max-h-full object-contain p-2" />
+                ) : logoPreview ? (
+                  <img src={logoPreview} alt="Logo Preview" className="max-w-full max-h-full object-contain p-2" />
+                ) : (
+                  <div className="text-center text-gray-400">
+                    <Upload className="w-12 h-12 mx-auto mb-2" />
+                    <p className="text-sm">No logo uploaded</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Upload Controls */}
+            <div className="flex-1">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Logo File
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/png,image/svg+xml"
+                    onChange={handleLogoChange}
+                    className="block w-full text-sm text-gray-500
+                      file:mr-4 file:py-2 file:px-4
+                      file:rounded file:border-0
+                      file:text-sm file:font-semibold
+                      file:bg-blue-50 file:text-blue-700
+                      hover:file:bg-blue-100
+                      cursor-pointer"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Accepted formats: PNG, SVG • Max size: 10MB
+                  </p>
+                </div>
+
+                {logoFile && (
+                  <div className="flex items-center space-x-3">
+                    <button
+                      onClick={handleLogoUpload}
+                      disabled={uploadingLogo}
+                      className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    >
+                      {uploadingLogo ? 'Uploading...' : 'Upload Logo'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setLogoFile(null);
+                        setLogoPreview(null);
+                      }}
+                      disabled={uploadingLogo}
+                      className="bg-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-400 disabled:cursor-not-allowed"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Settings Categories */}
       {renderCategory(

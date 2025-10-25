@@ -12,7 +12,7 @@ from app.utils.logger import setup_logger
 from app.services.smtp_service import smtp_service
 from app.services.template_service import template_service
 from app.services.reminder_scheduler import reminder_scheduler
-from app.models import TNMTicket, Project, EmailLog, TNMStatus
+from app.models import TNMTicket, Project, EmailLog, TNMStatus, AppSettings
 
 logger = setup_logger(__name__)
 
@@ -31,6 +31,30 @@ AsyncSessionLocal = async_sessionmaker(
     autocommit=False,
     autoflush=False,
 )
+
+
+async def get_company_logo_url(session: AsyncSession) -> Optional[str]:
+    """
+    Fetch company logo URL from app_settings
+
+    Args:
+        session: Database session
+
+    Returns:
+        Logo URL or None if not set
+    """
+    try:
+        stmt = select(AppSettings).where(AppSettings.key == 'COMPANY_LOGO_URL')
+        result = await session.execute(stmt)
+        setting = result.scalar_one_or_none()
+
+        if setting and setting.value:
+            return setting.value
+        return None
+
+    except Exception as e:
+        logger.error(f"Failed to fetch company logo URL: {str(e)}", exc_info=True)
+        return None
 
 
 async def get_tnm_ticket_with_project(
@@ -229,11 +253,15 @@ async def _send_rfco_email_async(
             # Build approval link
             approval_link = f"{config.API_BASE_URL}/approve/{approval_token}"
 
+            # Fetch company logo URL
+            company_logo_url = await get_company_logo_url(session)
+
             # Render email
             html_body, subject = template_service.render_rfco_email(
                 tnm_ticket=ticket_dict,
                 project=project_dict,
-                approval_link=approval_link
+                approval_link=approval_link,
+                company_logo_url=company_logo_url
             )
 
             # Send email
@@ -337,13 +365,17 @@ async def _send_reminder_email_async(
             # Build approval link
             approval_link = f"{config.API_BASE_URL}/approve/{approval_token}"
 
+            # Fetch company logo URL
+            company_logo_url = await get_company_logo_url(session)
+
             # Render email
             html_body, subject = template_service.render_reminder_email(
                 tnm_ticket=ticket_dict,
                 project=project_dict,
                 approval_link=approval_link,
                 reminder_number=reminder_number,
-                days_pending=days_pending
+                days_pending=days_pending,
+                company_logo_url=company_logo_url
             )
 
             # Send email
@@ -431,11 +463,15 @@ async def _send_approval_confirmation_email_async(
             # Build ticket link
             ticket_link = f"{config.API_BASE_URL}/tickets/{tnm_ticket_id}"
 
+            # Fetch company logo URL
+            company_logo_url = await get_company_logo_url(session)
+
             # Render email
             html_body, subject = template_service.render_approval_confirmation_email(
                 tnm_ticket=ticket_dict,
                 project=project_dict,
-                ticket_link=ticket_link
+                ticket_link=ticket_link,
+                company_logo_url=company_logo_url
             )
 
             # Send to each internal email

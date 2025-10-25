@@ -4,6 +4,7 @@ from typing import Optional, BinaryIO
 from datetime import timedelta
 from uuid import uuid4
 import structlog
+import json
 
 from app.core.config import settings
 
@@ -30,11 +31,26 @@ class StorageService:
         self._ensure_bucket()
 
     def _ensure_bucket(self):
-        """Create bucket if it doesn't exist"""
+        """Create bucket if it doesn't exist and set public read policy"""
         try:
             if not self.client.bucket_exists(self.bucket_name):
                 self.client.make_bucket(self.bucket_name)
                 logger.info("minio_bucket_created", bucket=self.bucket_name)
+
+            # Set bucket policy to allow public read access
+            policy = {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Principal": {"AWS": "*"},
+                        "Action": ["s3:GetObject"],
+                        "Resource": [f"arn:aws:s3:::{self.bucket_name}/*"]
+                    }
+                ]
+            }
+            self.client.set_bucket_policy(self.bucket_name, json.dumps(policy))
+            logger.info("minio_bucket_policy_set", bucket=self.bucket_name)
         except S3Error as e:
             logger.error("minio_bucket_error", error=str(e))
 

@@ -43,7 +43,8 @@ class TemplateService:
         self,
         tnm_ticket: Dict[str, Any],
         project: Dict[str, Any],
-        approval_link: str
+        approval_link: str,
+        company_logo_url: Optional[str] = None
     ) -> tuple[str, str]:
         """
         Render initial RFCO send email
@@ -52,6 +53,7 @@ class TemplateService:
             tnm_ticket: TNM ticket data
             project: Project data
             approval_link: Approval URL
+            company_logo_url: Company logo URL (optional)
 
         Returns:
             Tuple of (html_body, subject)
@@ -64,6 +66,7 @@ class TemplateService:
                 'company_name': config.COMPANY_NAME,
                 'company_email': config.COMPANY_EMAIL,
                 'company_phone': config.COMPANY_PHONE,
+                'company_logo_url': company_logo_url,
                 'tnm_number': tnm_ticket['tnm_number'],
                 'rfco_number': tnm_ticket.get('rfco_number'),
                 'project_name': project['name'],
@@ -108,7 +111,8 @@ class TemplateService:
         project: Dict[str, Any],
         approval_link: str,
         reminder_number: int,
-        days_pending: int
+        days_pending: int,
+        company_logo_url: Optional[str] = None
     ) -> tuple[str, str]:
         """
         Render reminder email
@@ -119,6 +123,7 @@ class TemplateService:
             approval_link: Approval URL
             reminder_number: Which reminder this is (1, 2, 3, etc.)
             days_pending: Number of days since initial send
+            company_logo_url: Company logo URL (optional)
 
         Returns:
             Tuple of (html_body, subject)
@@ -131,6 +136,7 @@ class TemplateService:
                 'company_name': config.COMPANY_NAME,
                 'company_email': config.COMPANY_EMAIL,
                 'company_phone': config.COMPANY_PHONE,
+                'company_logo_url': company_logo_url,
                 'tnm_number': tnm_ticket['tnm_number'],
                 'rfco_number': tnm_ticket.get('rfco_number'),
                 'project_name': project['name'],
@@ -162,7 +168,8 @@ class TemplateService:
         project: Dict[str, Any],
         ticket_link: str,
         line_items: Optional[list[Dict[str, Any]]] = None,
-        gc_notes: Optional[str] = None
+        gc_notes: Optional[str] = None,
+        company_logo_url: Optional[str] = None
     ) -> tuple[str, str]:
         """
         Render approval confirmation email (sent to internal team)
@@ -173,6 +180,7 @@ class TemplateService:
             ticket_link: URL to view ticket in system
             line_items: List of line item approvals
             gc_notes: Notes from GC
+            company_logo_url: Company logo URL (optional)
 
         Returns:
             Tuple of (html_body, subject)
@@ -187,6 +195,7 @@ class TemplateService:
                 'company_name': config.COMPANY_NAME,
                 'company_email': config.COMPANY_EMAIL,
                 'company_phone': config.COMPANY_PHONE,
+                'company_logo_url': company_logo_url,
                 'tnm_number': tnm_ticket['tnm_number'],
                 'rfco_number': tnm_ticket.get('rfco_number'),
                 'project_name': project['name'],

@@ -33,6 +33,7 @@ class Settings(BaseSettings):
 
     # ============ MINIO (S3 Storage) ============
     MINIO_SERVER_URL: str = Field(default="minio:9000")
+    MINIO_EXTERNAL_URL: str = Field(default="http://localhost:9000")
     MINIO_ROOT_USER: str = Field(default="minioadmin")
     MINIO_ROOT_PASSWORD: str = Field(default="minioadmin")
     MINIO_BUCKET_NAME: str = Field(default="changeorders")
