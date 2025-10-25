@@ -4,6 +4,9 @@ set +e
 
 echo "🚀 ChangeOrderino Frontend - Starting..."
 
+# Read VERSION from file
+VERSION=$(cat /usr/share/nginx/html/VERSION 2>/dev/null || echo "unknown")
+
 # Create runtime configuration file
 echo "📝 Generating runtime configuration..."
 cat > /usr/share/nginx/html/config.js << EOF
@@ -13,13 +16,15 @@ window.__RUNTIME_CONFIG__ = {
   AUTH_ENABLED: '${VITE_AUTH_ENABLED:-false}',
   KEYCLOAK_URL: '${VITE_KEYCLOAK_URL:-}',
   KEYCLOAK_REALM: '${VITE_KEYCLOAK_REALM:-}',
-  KEYCLOAK_CLIENT_ID: '${VITE_KEYCLOAK_CLIENT_ID:-}'
+  KEYCLOAK_CLIENT_ID: '${VITE_KEYCLOAK_CLIENT_ID:-}',
+  VERSION: '${VERSION}'
 };
 
 console.log('✅ Runtime config loaded:', window.__RUNTIME_CONFIG__);
 EOF
 
 echo "✅ Runtime configuration created"
+echo "   VERSION: ${VERSION}"
 echo "   API_URL: ${VITE_API_URL:-/api}"
 echo "   AUTH_ENABLED: ${VITE_AUTH_ENABLED:-false}"
 echo "   KEYCLOAK_URL: ${VITE_KEYCLOAK_URL:-(not set)}"

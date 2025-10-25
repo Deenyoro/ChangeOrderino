@@ -6,6 +6,7 @@ FROM node:18-alpine AS builder
 WORKDIR /app
 
 # Accept build arguments
+ARG VERSION=unknown
 ARG VITE_API_URL
 ARG VITE_AUTH_ENABLED
 ARG VITE_KEYCLOAK_URL
@@ -34,11 +35,17 @@ RUN npm run build
 # Stage 2: Serve with nginx
 FROM nginx:alpine
 
+# Accept VERSION arg again for second stage
+ARG VERSION=unknown
+
 # Install wget for health checks
 RUN apk add --no-cache wget
 
 # Copy built files from builder
 COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Write version file
+RUN echo "${VERSION}" > /usr/share/nginx/html/VERSION
 
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf

@@ -2,8 +2,17 @@
 Application configuration using Pydantic Settings
 """
 from typing import Optional
+from pathlib import Path
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def get_version() -> str:
+    """Get version from VERSION file or fallback to unknown"""
+    version_file = Path("/app/VERSION")
+    if version_file.exists():
+        return version_file.read_text().strip()
+    return "unknown"
 
 
 class Settings(BaseSettings):
@@ -11,7 +20,7 @@ class Settings(BaseSettings):
 
     # ============ GENERAL ============
     APP_NAME: str = "ChangeOrderino API"
-    VERSION: str = "1.0.0"
+    VERSION: str = Field(default_factory=get_version)
     ENVIRONMENT: str = Field(default="development")
     DEBUG: bool = Field(default=False)
 

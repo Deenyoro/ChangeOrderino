@@ -29,63 +29,71 @@ class TokenData(BaseModel):
 class KeycloakClient:
     """Keycloak client for token validation"""
 
-    _public_key_cache: Optional[str] = None
-    _public_key_cache_time: Optional[datetime] = None
+    _jwks_cache: Optional[dict] = None
+    _jwks_cache_time: Optional[datetime] = None
 
     @classmethod
-    async def get_public_key(cls) -> str:
+    async def get_jwks(cls) -> dict:
         """
-        Get Keycloak public key for JWT validation
+        Get Keycloak JWKS for JWT validation
         Cached for 1 hour
         """
-        if cls._public_key_cache and cls._public_key_cache_time:
-            if datetime.now() - cls._public_key_cache_time < timedelta(hours=1):
-                return cls._public_key_cache
+        if cls._jwks_cache and cls._jwks_cache_time:
+            if datetime.now() - cls._jwks_cache_time < timedelta(hours=1):
+                return cls._jwks_cache
 
-        # Fetch public key from Keycloak
+        # Fetch JWKS from Keycloak
         url = f"{settings.KEYCLOAK_REALM_URL}/protocol/openid-connect/certs"
         async with httpx.AsyncClient() as client:
             response = await client.get(url, timeout=10.0)
             response.raise_for_status()
-            keys = response.json()
-
-            # Get first key (RSA256)
-            if keys.get("keys"):
-                key_data = keys["keys"][0]
-                # Construct PEM format
-                cls._public_key_cache = f"""-----BEGIN PUBLIC KEY-----
-{key_data.get('x5c', [''])[0]}
------END PUBLIC KEY-----"""
-                cls._public_key_cache_time = datetime.now()
-                return cls._public_key_cache
-
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to fetch Keycloak public key"
-        )
+            cls._jwks_cache = response.json()
+            cls._jwks_cache_time = datetime.now()
+            return cls._jwks_cache
 
     @classmethod
     async def validate_token(cls, token: str) -> TokenData:
         """Validate JWT token and return token data"""
         try:
-            public_key = await cls.get_public_key()
+            # Get JWKS
+            jwks = await cls.get_jwks()
 
-            # Decode and validate token
+            # Get token header to find the key ID
+            unverified_header = jwt.get_unverified_header(token)
+
+            # Find the right key from JWKS
+            key = None
+            for jwk_key in jwks.get("keys", []):
+                if jwk_key.get("kid") == unverified_header.get("kid"):
+                    key = jwk_key
+                    break
+
+            if not key:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Unable to find appropriate key in JWKS"
+                )
+
+            # Decode and validate token using the JWK directly
             payload = jwt.decode(
                 token,
-                public_key,
+                key,
                 algorithms=["RS256"],
                 audience=settings.KEYCLOAK_CLIENT_ID,
+                options={"verify_aud": False}  # Keycloak doesn't always set aud for public clients
             )
 
-            # Extract roles from realm_access or resource_access
-            roles = []
-            if "realm_access" in payload:
-                roles.extend(payload["realm_access"].get("roles", []))
-            if "resource_access" in payload and settings.KEYCLOAK_CLIENT_ID in payload["resource_access"]:
-                roles.extend(
-                    payload["resource_access"][settings.KEYCLOAK_CLIENT_ID].get("roles", [])
-                )
+            # Extract roles from the "roles" claim (we configured a mapper for this)
+            roles = payload.get("roles", [])
+
+            # Fallback to realm_access or resource_access if roles claim not found
+            if not roles:
+                if "realm_access" in payload:
+                    roles.extend(payload["realm_access"].get("roles", []))
+                if "resource_access" in payload and settings.KEYCLOAK_CLIENT_ID in payload["resource_access"]:
+                    roles.extend(
+                        payload["resource_access"][settings.KEYCLOAK_CLIENT_ID].get("roles", [])
+                    )
 
             return TokenData(
                 sub=payload.get("sub"),

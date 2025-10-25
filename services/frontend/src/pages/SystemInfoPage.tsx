@@ -53,17 +53,19 @@ const SystemInfoPage: React.FC = () => {
       } catch {
         // Fall back to basic health check
         const response = await apiClient.get('/health');
+        const runtimeVersion = (window as any).__RUNTIME_CONFIG__?.VERSION || 'unknown';
         setSystemHealth({
           status: response.data.status || 'unknown',
-          version: '1.0.0',
+          version: runtimeVersion,
           environment: 'development'
         });
       }
     } catch (error) {
       console.error('Failed to fetch system health:', error);
+      const runtimeVersion = (window as any).__RUNTIME_CONFIG__?.VERSION || 'unknown';
       setSystemHealth({
         status: 'error',
-        version: 'unknown',
+        version: runtimeVersion,
         environment: 'unknown'
       });
     } finally {

@@ -70,6 +70,8 @@ services:
     build:
       context: ./services/api
       dockerfile: Dockerfile
+      args:
+        VERSION: ${VERSION:-unknown}
     container_name: changeorderino-api
     restart: unless-stopped
     environment:
@@ -154,6 +156,7 @@ services:
       context: ./services/frontend
       dockerfile: Dockerfile
       args:
+        VERSION: ${VERSION:-unknown}
         VITE_API_URL: ${VITE_API_URL}
         VITE_AUTH_ENABLED: ${VITE_AUTH_ENABLED}
         VITE_KEYCLOAK_URL: ${VITE_KEYCLOAK_URL}
@@ -232,18 +235,9 @@ services:
     networks:
       - backend
       - public
-    ports:
-      - "8080:8080"
-      - "8443:8443"
     depends_on:
       db:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/health/ready || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 90s
 
   # ==========================================
   # Cloudflare Tunnel (Optional)

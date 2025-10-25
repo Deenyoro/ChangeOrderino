@@ -46,7 +46,7 @@ export const HelpPage: React.FC = () => {
 
         // Get version from health endpoint
         try {
-          const healthResponse = await fetch('/api/v1/health');
+          const healthResponse = await fetch('/api/health');
           if (healthResponse.ok) {
             const healthData = await healthResponse.json();
             data.version = healthData.version || 'unknown';

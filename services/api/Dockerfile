@@ -1,5 +1,8 @@
 FROM python:3.13-slim
 
+# Build args
+ARG VERSION=unknown
+
 # Set working directory
 WORKDIR /app
 
@@ -28,6 +31,9 @@ RUN poetry config virtualenvs.create false \
 
 # Copy application code
 COPY ./app /app/app
+
+# Write version file
+RUN echo "${VERSION}" > /app/VERSION
 
 # Create non-root user
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
