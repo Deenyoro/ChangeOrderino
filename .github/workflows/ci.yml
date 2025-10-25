@@ -195,11 +195,11 @@ jobs:
         AUTH_ENABLED=false
         VITE_AUTH_ENABLED=false
 
-        # SMTP Configuration
-        SMTP_ENABLED=false
+        # SMTP Configuration (enabled to test email service backbone)
+        SMTP_ENABLED=true
         SMTP_HOST=localhost
-        SMTP_PORT=587
-        SMTP_USE_TLS=true
+        SMTP_PORT=1025
+        SMTP_USE_TLS=false
         SMTP_USERNAME=test
         SMTP_PASSWORD=test
         SMTP_FROM_EMAIL=noreply@test.com
@@ -220,8 +220,8 @@ jobs:
         VITE_KEYCLOAK_REALM=changeorderino
         VITE_KEYCLOAK_CLIENT_ID=changeorderino-client
 
-        # Email Service
-        REMINDER_ENABLED=false
+        # Email Service (enabled to test reminder backbone)
+        REMINDER_ENABLED=true
         REMINDER_INTERVAL_DAYS=7
         REMINDER_MAX_RETRIES=3
 
@@ -275,6 +275,14 @@ jobs:
         echo "Testing API health endpoint..."
         curl -f http://localhost:3000/api/health
         echo "✅ API health check passed"
+
+    - name: Verify email service backbone
+      run: |
+        echo "Checking email service container status..."
+        docker compose ps email-service
+        echo "Checking email service logs..."
+        docker compose logs email-service | tail -20
+        echo "✅ Email service backbone verified"
 
     - name: Test frontend
       run: |
