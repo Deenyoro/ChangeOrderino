@@ -20,7 +20,7 @@ export const NewProjectPage: React.FC = () => {
         </Link>
         <h1 className="text-2xl font-bold text-gray-900">Create New Project</h1>
         <p className="mt-1 text-sm text-gray-600">
-          Set up a new project/job with default OH&P percentages
+          Set up a new project/job with OH&P percentages and labor rates
         </p>
       </div>
 

@@ -17,6 +17,10 @@ export interface Project {
   labor_ohp_percent: number;
   equipment_ohp_percent: number;
   subcontractor_ohp_percent: number;
+  rate_project_manager: number;
+  rate_superintendent: number;
+  rate_carpenter: number;
+  rate_laborer: number;
   reminder_interval_days: number;
   reminder_max_retries: number;
   is_active: boolean;
@@ -40,6 +44,10 @@ export interface ProjectFormData {
   labor_ohp_percent?: number;
   equipment_ohp_percent?: number;
   subcontractor_ohp_percent?: number;
+  rate_project_manager?: number;
+  rate_superintendent?: number;
+  rate_carpenter?: number;
+  rate_laborer?: number;
   reminder_interval_days?: number;
   reminder_max_retries?: number;
   is_active?: boolean;

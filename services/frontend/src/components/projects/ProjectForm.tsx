@@ -195,6 +195,63 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess }) 
         </div>
       </div>
 
+      {/* Labor Rates */}
+      <div className="card">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          Labor Rates ($ per hour)
+        </h3>
+        <p className="text-sm text-gray-600 mb-4">
+          These hourly rates will be used for labor calculations on all TNM tickets for this project.
+          Rates are captured at project creation and won't change if global defaults are updated later.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Input
+            label="Project Manager"
+            type="number"
+            step="0.01"
+            {...register('rate_project_manager', {
+              valueAsNumber: true,
+              min: { value: 0, message: 'Must be 0 or greater' },
+            })}
+            error={errors.rate_project_manager?.message}
+            placeholder="91.00"
+          />
+          <Input
+            label="Superintendent"
+            type="number"
+            step="0.01"
+            {...register('rate_superintendent', {
+              valueAsNumber: true,
+              min: { value: 0, message: 'Must be 0 or greater' },
+            })}
+            error={errors.rate_superintendent?.message}
+            placeholder="82.00"
+          />
+          <Input
+            label="Carpenter"
+            type="number"
+            step="0.01"
+            {...register('rate_carpenter', {
+              valueAsNumber: true,
+              min: { value: 0, message: 'Must be 0 or greater' },
+            })}
+            error={errors.rate_carpenter?.message}
+            placeholder="75.00"
+          />
+          <Input
+            label="Laborer"
+            type="number"
+            step="0.01"
+            {...register('rate_laborer', {
+              valueAsNumber: true,
+              min: { value: 0, message: 'Must be 0 or greater' },
+            })}
+            error={errors.rate_laborer?.message}
+            placeholder="57.00"
+          />
+        </div>
+      </div>
+
       {/* Reminder Settings */}
       <div className="card">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Reminder Settings</h3>

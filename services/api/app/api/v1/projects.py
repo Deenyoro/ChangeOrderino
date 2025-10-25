@@ -10,6 +10,7 @@ from app.core.auth import get_current_user, TokenData
 from app.models.project import Project
 from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse
 from app.services.audit_service import audit_service
+from app.services.settings_service import SettingsService
 
 router = APIRouter()
 
@@ -44,8 +45,54 @@ async def create_project(
     current_user: TokenData = Depends(get_current_user),
 ):
     """Create a new project"""
-    # Create project
-    project = Project(**project_data.model_dump())
+    # Convert to dict and populate defaults if not provided
+    project_dict = project_data.model_dump()
+
+    # Populate labor rates with current defaults if not provided
+    # This captures the rates at creation time so they don't change later
+    if project_dict.get('rate_project_manager') is None:
+        project_dict['rate_project_manager'] = await SettingsService.get_setting(
+            'RATE_PROJECT_MANAGER', db
+        )
+
+    if project_dict.get('rate_superintendent') is None:
+        project_dict['rate_superintendent'] = await SettingsService.get_setting(
+            'RATE_SUPERINTENDENT', db
+        )
+
+    if project_dict.get('rate_carpenter') is None:
+        project_dict['rate_carpenter'] = await SettingsService.get_setting(
+            'RATE_CARPENTER', db
+        )
+
+    if project_dict.get('rate_laborer') is None:
+        project_dict['rate_laborer'] = await SettingsService.get_setting(
+            'RATE_LABORER', db
+        )
+
+    # Populate OHP percentages with current defaults if not provided
+    if project_dict.get('material_ohp_percent') is None:
+        project_dict['material_ohp_percent'] = await SettingsService.get_setting(
+            'DEFAULT_MATERIAL_OHP', db
+        )
+
+    if project_dict.get('labor_ohp_percent') is None:
+        project_dict['labor_ohp_percent'] = await SettingsService.get_setting(
+            'DEFAULT_LABOR_OHP', db
+        )
+
+    if project_dict.get('equipment_ohp_percent') is None:
+        project_dict['equipment_ohp_percent'] = await SettingsService.get_setting(
+            'DEFAULT_EQUIPMENT_OHP', db
+        )
+
+    if project_dict.get('subcontractor_ohp_percent') is None:
+        project_dict['subcontractor_ohp_percent'] = await SettingsService.get_setting(
+            'DEFAULT_SUBCONTRACTOR_OHP', db
+        )
+
+    # Create project with populated defaults
+    project = Project(**project_dict)
 
     db.add(project)
     await db.flush()  # Get project ID
@@ -57,7 +104,7 @@ async def create_project(
         entity_id=project.id,
         action='create',
         user_id=UUID(current_user.sub),
-        changes={'all_fields': project_data.model_dump()},
+        changes={'all_fields': project_dict},
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get('user-agent'),
     )
