@@ -16,7 +16,7 @@ rq-scheduler==0.14.0
 # Database
 sqlalchemy==2.0.36
 asyncpg==0.30.0
-psycopg2-binary==2.9.10
+psycopg2-binary==2.9.11
 
 # Configuration
 python-dotenv==1.0.1
