@@ -267,37 +267,33 @@ export const TNMTicketsPage: React.FC = () => {
             </div>
             <div className="flex gap-2 flex-wrap">
               <Button
-                variant="secondary"
                 onClick={handleBulkApprove}
                 disabled={isProcessing}
-                className="bg-green-600 text-white hover:bg-green-700"
+                className="bg-green-600 text-white hover:bg-green-700 border-green-700 focus:ring-green-500"
               >
                 <CheckSquare className="w-4 h-4 mr-2" />
                 Approve
               </Button>
               <Button
-                variant="secondary"
                 onClick={handleBulkUndoApproval}
                 disabled={isProcessing}
-                className="bg-orange-600 text-white hover:bg-orange-700"
+                className="bg-orange-600 text-white hover:bg-orange-700 border-orange-700 focus:ring-orange-500"
               >
                 <RotateCcw className="w-4 h-4 mr-2" />
                 Undo Approval
               </Button>
               <Button
-                variant="secondary"
                 onClick={handleBulkMarkAsPaid}
                 disabled={isProcessing}
-                className="bg-blue-600 text-white hover:bg-blue-700"
+                className="bg-blue-600 text-white hover:bg-blue-700 border-blue-700 focus:ring-blue-500"
               >
                 <DollarSign className="w-4 h-4 mr-2" />
                 Mark Paid
               </Button>
               <Button
-                variant="secondary"
                 onClick={handleBulkMarkAsUnpaid}
                 disabled={isProcessing}
-                className="bg-red-600 text-white hover:bg-red-700"
+                className="bg-red-600 text-white hover:bg-red-700 border-red-700 focus:ring-red-500"
               >
                 <XCircle className="w-4 h-4 mr-2" />
                 Mark Unpaid
