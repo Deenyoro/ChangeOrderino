@@ -1,65 +1,65 @@
 KAWACONNECT SOFTWARE LICENSE AGREEMENT
-Version 1.0 – (Last updated: 23 July 2025)
+Version 1.0 – (Last updated: 26 October 2025)
 
-IMPORTANT—READ CAREFULLY.  This Software License Agreement (“Agreement”) is a legal contract between KawaConnect LLC (“Licensor”) and the individual or entity that installs, copies, accesses, or otherwise uses the accompanying proprietary software and related materials (“Licensee”).  BY INSTALLING OR USING THE SOFTWARE, LICENSEE AGREES TO BE BOUND BY ALL TERMS BELOW.  IF LICENSEE DOES NOT AGREE, DO NOT INSTALL OR USE THE SOFTWARE.
+IMPORTANT—READ CAREFULLY.  This Software License Agreement ("Agreement") is a legal contract between KawaConnect LLC ("Licensor") and the individual or entity that installs, copies, accesses, or otherwise uses the accompanying proprietary software and related materials ("Licensee").  BY INSTALLING OR USING THE SOFTWARE, LICENSEE AGREES TO BE BOUND BY ALL TERMS BELOW.  IF LICENSEE DOES NOT AGREE, DO NOT INSTALL OR USE THE SOFTWARE.
 
-1.  DEFINITIONS  
-    1.1  “Software” means the executable code, scripts, configuration files, APIs, sample data, and all updates, upgrades, modifications, patches, documentation, and other materials provided by Licensor under this Agreement.  
-    1.2  “Authorized Use” means operation of the Software solely for Licensee’s internal business purposes, in object‑code form, on the hardware and for the number of users or instances specified in any applicable order, invoice, or other ordering document (“Order”).
+1.  DEFINITIONS
+    1.1  "Software" means the executable code, scripts, configuration files, APIs, sample data, and all updates, upgrades, modifications, patches, documentation, and other materials provided by Licensor under this Agreement.
+    1.2  "Authorized Use" means operation of the Software solely for Licensee's internal business purposes, in object‑code form, on the hardware and for the number of users or instances specified in any applicable order, invoice, or other ordering document ("Order").
 
-2.  OWNERSHIP AND INTELLECTUAL PROPERTY  
-    2.1  The Software is licensed, not sold.  All right, title, and interest in and to the Software and any copies, including all associated copyrights, trade secrets, trademarks, and other intellectual‑property rights, are and shall remain exclusively with Licensor and its licensors.  
+2.  OWNERSHIP AND INTELLECTUAL PROPERTY
+    2.1  The Software is licensed, not sold.  All right, title, and interest in and to the Software and any copies, including all associated copyrights, trade secrets, trademarks, and other intellectual‑property rights, are and shall remain exclusively with Licensor and its licensors.
     2.2  No ownership rights are transferred to Licensee under this Agreement.  Any rights not expressly granted are reserved by Licensor.
 
-3.  GRANT OF LICENSE  
-    Subject to full, ongoing compliance with this Agreement and payment of all applicable fees, Licensor hereby grants Licensee a limited, non‑exclusive, non‑transferable, non‑sublicensable, revocable license to:  
-    (a) download, install, and run one executable copy of the Software in the environment specified in an Order; and  
-    (b) make a single archival backup copy, provided such copy is not installed or used for productive purposes.  
+3.  GRANT OF LICENSE
+    Subject to full, ongoing compliance with this Agreement and payment of all applicable fees, Licensor hereby grants Licensee a limited, non‑exclusive, non‑transferable, non‑sublicensable, revocable license to:
+    (a) download, install, and run one executable copy of the Software in the environment specified in an Order; and
+    (b) make a single archival backup copy, provided such copy is not installed or used for productive purposes.
 
-4.  USAGE RESTRICTIONS  
-    Licensee shall not, and shall not permit any third party to:  
-    a) copy, distribute, rent, lend, lease, sublicense, or otherwise transfer the Software or any portion thereof;  
-    b) reverse engineer, decompile, disassemble, or otherwise attempt to derive the source code, algorithms, or underlying ideas of the Software, except to the limited extent (if any) that applicable law expressly permits notwithstanding this restriction;  
-    c) modify, adapt, translate, or create derivative works based on the Software;  
-    d) use the Software to provide service‑bureau, time‑sharing, SaaS, hosting, or similar services to third parties without Licensor’s prior written consent;  
-    e) remove or alter any proprietary notices, labels, or marks in the Software;  
+4.  USAGE RESTRICTIONS
+    Licensee shall not, and shall not permit any third party to:
+    a) copy, distribute, rent, lend, lease, sublicense, or otherwise transfer the Software or any portion thereof;
+    b) reverse engineer, decompile, disassemble, or otherwise attempt to derive the source code, algorithms, or underlying ideas of the Software, except to the limited extent (if any) that applicable law expressly permits notwithstanding this restriction;
+    c) modify, adapt, translate, or create derivative works based on the Software;
+    d) use the Software to provide service‑bureau, time‑sharing, SaaS, hosting, or similar services to third parties without Licensor's prior written consent;
+    e) remove or alter any proprietary notices, labels, or marks in the Software;
     f) use the Software in violation of any applicable law, regulation, or export control.
 
-5.  CONFIDENTIALITY & IP PROTECTION  
+5.  CONFIDENTIALITY & IP PROTECTION
     The Software embodies trade secrets of Licensor.  Licensee shall employ at least the same degree of care it uses to protect its own confidential information (and in no event less than reasonable care) to prevent any unauthorized use, disclosure, reproduction, or distribution of the Software.
 
-6.  SUPPORT AND MAINTENANCE  
+6.  SUPPORT AND MAINTENANCE
     Unless otherwise agreed in a separate support agreement, Licensor is under no obligation to provide maintenance, updates, or support services.
 
-7.  LIMITED WARRANTY; DISCLAIMER  
-    7.1  Limited Media Warranty.  Licensor warrants for thirty (30) days from delivery that any physical media on which the Software is provided is free of defects in materials and workmanship.  Licensee’s exclusive remedy is replacement of defective media returned to Licensor within the warranty period.  
-    7.2  EXCEPT AS EXPRESSLY SET FORTH IN §7.1, THE SOFTWARE AND ANY SERVICES ARE PROVIDED “AS IS” AND “WITH ALL FAULTS.”  LICENSOR DISCLAIMS ALL OTHER WARRANTIES, EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON‑INFRINGEMENT.  LICENSOR DOES NOT WARRANT THAT THE SOFTWARE WILL BE ERROR‑FREE OR UNINTERRUPTED OR THAT ALL DEFECTS WILL BE CORRECTED.
+7.  LIMITED WARRANTY; DISCLAIMER
+    7.1  Limited Media Warranty.  Licensor warrants for thirty (30) days from delivery that any physical media on which the Software is provided is free of defects in materials and workmanship.  Licensee's exclusive remedy is replacement of defective media returned to Licensor within the warranty period.
+    7.2  EXCEPT AS EXPRESSLY SET FORTH IN §7.1, THE SOFTWARE AND ANY SERVICES ARE PROVIDED "AS IS" AND "WITH ALL FAULTS."  LICENSOR DISCLAIMS ALL OTHER WARRANTIES, EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON‑INFRINGEMENT.  LICENSOR DOES NOT WARRANT THAT THE SOFTWARE WILL BE ERROR‑FREE OR UNINTERRUPTED OR THAT ALL DEFECTS WILL BE CORRECTED.
 
-8.  LIMITATION OF LIABILITY  
-    TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL LICENSOR OR ITS SUPPLIERS BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, PUNITIVE, OR CONSEQUENTIAL DAMAGES (INCLUDING LOST PROFITS, LOST DATA, BUSINESS INTERRUPTION, OR COST OF SUBSTITUTE GOODS OR SERVICES) ARISING OUT OF OR RELATED TO THIS AGREEMENT OR THE USE OF OR INABILITY TO USE THE SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.  LICENSOR’S TOTAL AGGREGATE LIABILITY UNDER THIS AGREEMENT SHALL NOT EXCEED THE TOTAL FEES PAID BY LICENSEE FOR THE SPECIFIC COPY OF THE SOFTWARE GIVING RISE TO THE CLAIM.
+8.  LIMITATION OF LIABILITY
+    TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL LICENSOR OR ITS SUPPLIERS BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, PUNITIVE, OR CONSEQUENTIAL DAMAGES (INCLUDING LOST PROFITS, LOST DATA, BUSINESS INTERRUPTION, OR COST OF SUBSTITUTE GOODS OR SERVICES) ARISING OUT OF OR RELATED TO THIS AGREEMENT OR THE USE OF OR INABILITY TO USE THE SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.  LICENSOR'S TOTAL AGGREGATE LIABILITY UNDER THIS AGREEMENT SHALL NOT EXCEED THE TOTAL FEES PAID BY LICENSEE FOR THE SPECIFIC COPY OF THE SOFTWARE GIVING RISE TO THE CLAIM.
 
-9.  TERM AND TERMINATION  
-    9.1  Term.  This Agreement is effective on the date Licensee first installs or uses the Software and continues until terminated as set forth herein.  
-    9.2  Termination for Convenience.  Licensee may terminate this Agreement at any time by destroying all copies of the Software.  
-    9.3  Termination for Cause.  Licensor may terminate this Agreement immediately upon written notice if Licensee breaches any material provision and fails to cure within thirty (30) days of notice, or immediately if Licensee becomes insolvent, enters bankruptcy, or attempts an unauthorized transfer of the Software.  
-    9.4  Effect of Termination.  Upon termination, Licensee must cease all use of the Software, destroy all copies, and certify such destruction to Licensor in writing.  Sections 2, 4, 5, 7, 8, 9.4, 11, 12, and 13 survive any expiration or termination.
+9.  TERM AND TERMINATION
+    9.1  Term.  This Agreement is effective on the date Licensee first installs or uses the Software and continues until terminated as set forth herein.
+    9.2  Termination for Convenience.  Licensee may terminate this Agreement at any time by destroying all copies of the Software.
+    9.3  Termination for Cause.  Licensor may terminate this Agreement immediately upon written notice if Licensee breaches any material provision and fails to cure within thirty (30) days of notice, or immediately if Licensee becomes insolvent, enters bankruptcy, or attempts an unauthorized transfer of the Software.
+    9.4  Effect of Termination.  Upon termination, Licensee must cease all use of the Software, destroy all copies, and certify such destruction to Licensor in writing.  Sections 2, 4, 5, 7, 8, 9.4, 11, 12, and 13 survive any expiration or termination.
 
-10.  EXPORT COMPLIANCE  
+10.  EXPORT COMPLIANCE
     Licensee shall comply with all applicable U.S. and foreign export control laws and regulations and shall not export or re‑export the Software to any embargoed country or prohibited end user without the required government licenses.
 
-11.  GOVERNING LAW; JURISDICTION  
+11.  GOVERNING LAW; JURISDICTION
     This Agreement shall be governed by and construed in accordance with the laws of the Commonwealth of Pennsylvania, U.S.A., without regard to conflict‑of‑laws principles.  The state and federal courts located in Allegheny County, Pennsylvania shall have exclusive jurisdiction to adjudicate any dispute arising out of or relating to this Agreement, and the parties hereby consent to personal jurisdiction and venue therein.
 
-12.  ENTIRE AGREEMENT; ORDER OF PRECEDENCE  
+12.  ENTIRE AGREEMENT; ORDER OF PRECEDENCE
     This Agreement (including any Orders expressly incorporated herein) constitutes the entire agreement between the parties with respect to the Software and supersedes all prior or contemporaneous agreements or representations, written or oral, regarding the subject matter.
 
-13.  SEVERABILITY  
+13.  SEVERABILITY
     If any provision of this Agreement is held unenforceable, the remainder shall remain in full force, and the invalid provision shall be replaced by an enforceable provision that most closely reflects the original intent.
 
-14.  ASSIGNMENT  
-    Licensee may not assign or transfer this Agreement, whether by operation of law or otherwise, without Licensor’s prior written consent.  Any attempted assignment in violation of this Section is void.  Licensor may assign this Agreement freely.
+14.  ASSIGNMENT
+    Licensee may not assign or transfer this Agreement, whether by operation of law or otherwise, without Licensor's prior written consent.  Any attempted assignment in violation of this Section is void.  Licensor may assign this Agreement freely.
 
-15.  WAIVER  
+15.  WAIVER
     No waiver of any breach or default shall be deemed a waiver of any subsequent breach or default.
 
 — END OF AGREEMENT —

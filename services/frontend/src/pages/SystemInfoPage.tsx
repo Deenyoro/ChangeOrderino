@@ -11,7 +11,9 @@ import {
   Activity,
   Database,
   HardDrive,
-  Server
+  Server,
+  ScrollText,
+  X
 } from 'lucide-react';
 import { apiClient } from '../api/client';
 
@@ -35,9 +37,28 @@ const SystemInfoPage: React.FC = () => {
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
   const [healthLoading, setHealthLoading] = useState(false);
   const [versionCopied, setVersionCopied] = useState(false);
+  const [showLicenseModal, setShowLicenseModal] = useState(false);
+  const [showThirdPartyLicenseModal, setShowThirdPartyLicenseModal] = useState(false);
+  const [kawaConnectLicense, setKawaConnectLicense] = useState<string>('');
+  const [thirdPartyLicenses, setThirdPartyLicenses] = useState<string>('');
 
   // Detect enabled features
   const isAuthEnabled = (window as any).__RUNTIME_CONFIG__?.AUTH_ENABLED === 'true';
+
+  // Fetch LICENSE files at runtime
+  useEffect(() => {
+    Promise.all([
+      fetch('/LICENSE').then(r => r.text()),
+      fetch('/THIRD-PARTY-LICENSES').then(r => r.text())
+    ]).then(([license, thirdParty]) => {
+      setKawaConnectLicense(license)
+      setThirdPartyLicenses(thirdParty)
+    }).catch(err => {
+      console.error('Failed to load LICENSE files:', err)
+      setKawaConnectLicense('LICENSE file not available')
+      setThirdPartyLicenses('Third-party licenses not available')
+    })
+  }, [])
 
   useEffect(() => {
     fetchSystemHealth();
@@ -252,7 +273,91 @@ const SystemInfoPage: React.FC = () => {
             </span>
           </div>
         </div>
+
+        {/* Licenses Section */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+            <ScrollText className="w-5 h-5" />
+            Licenses
+          </h3>
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => setShowLicenseModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700 transition-colors"
+            >
+              <ScrollText className="w-4 h-4" />
+              KawaConnect License
+            </button>
+            <button
+              onClick={() => setShowThirdPartyLicenseModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700 transition-colors"
+            >
+              <ScrollText className="w-4 h-4" />
+              Third-Party Licenses
+            </button>
+          </div>
+        </div>
       </div>
+
+      {/* KawaConnect License Modal */}
+      {showLicenseModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">KawaConnect Software License Agreement</h2>
+              <button
+                onClick={() => setShowLicenseModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1">
+              <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono leading-relaxed">
+                {kawaConnectLicense}
+              </pre>
+            </div>
+            <div className="p-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowLicenseModal(false)}
+                className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Third-Party Licenses Modal */}
+      {showThirdPartyLicenseModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">Third-Party Software Licenses</h2>
+              <button
+                onClick={() => setShowThirdPartyLicenseModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1">
+              <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono leading-relaxed">
+                {thirdPartyLicenses}
+              </pre>
+            </div>
+            <div className="p-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowThirdPartyLicenseModal(false)}
+                className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

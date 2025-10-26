@@ -60,6 +60,20 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v5
 
+    - name: Copy LICENSE files to frontend
+      if: matrix.service.name == 'frontend' || matrix.service.name == 'frontend-noauth'
+      run: |
+        mkdir -p services/frontend/public
+        cp LICENSE services/frontend/public/LICENSE
+        cp THIRD-PARTY-LICENSES services/frontend/public/THIRD-PARTY-LICENSES
+
+    - name: Verify LICENSE files copied successfully
+      if: matrix.service.name == 'frontend' || matrix.service.name == 'frontend-noauth'
+      run: |
+        test -f services/frontend/public/LICENSE || (echo "❌ LICENSE file missing!" && exit 1)
+        test -f services/frontend/public/THIRD-PARTY-LICENSES || (echo "❌ THIRD-PARTY-LICENSES file missing!" && exit 1)
+        echo "✅ LICENSE files verified in public/ directory"
+
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 

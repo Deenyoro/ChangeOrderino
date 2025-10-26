@@ -1,0 +1,57 @@
+ChangeOrderino
+Copyright (c) 2025 KawaConnect LLC
+
+This software incorporates third-party open source components.
+See THIRD-PARTY-LICENSES file for complete license texts.
+
+THIRD-PARTY COMPONENT NOTICES:
+
+FastAPI
+Copyright (c) Sebastián Ramírez
+Licensed under MIT License
+
+SQLAlchemy
+Copyright (c) Mike Bayer
+Licensed under MIT License
+
+Pydantic
+Copyright (c) Samuel Colvin and other contributors
+Licensed under MIT License
+
+React
+Copyright (c) Meta Platforms, Inc. and affiliates
+Licensed under MIT License
+
+Tailwind CSS
+Copyright (c) Tailwind Labs, Inc.
+Licensed under MIT License
+
+Axios
+Copyright (c) 2014-present Matt Zabriskie & Collaborators
+Licensed under MIT License
+
+date-fns
+Copyright (c) 2014-present date-fns contributors
+Licensed under MIT License
+
+Redux Toolkit
+Copyright (c) 2018-present Mark Erikson, Matt Sutkowski, and Redux Toolkit Contributors
+Licensed under MIT License
+
+PostgreSQL
+Portions Copyright (c) 1996-2025, PostgreSQL Global Development Group
+Licensed under PostgreSQL License
+
+Redis
+Copyright (c) 2006-2025, Redis Ltd.
+Licensed under BSD 3-Clause License
+
+MinIO
+Copyright (c) 2015-2025 MinIO, Inc.
+Licensed under Apache License 2.0
+
+REGULATORY COMPLIANCE:
+
+Users are responsible for ensuring that their use of this software complies with
+applicable industry standards, regulations, and certification requirements for
+their specific use case and jurisdiction.
