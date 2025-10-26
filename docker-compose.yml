@@ -71,7 +71,7 @@ services:
       context: ./services/api
       dockerfile: Dockerfile
       args:
-        VERSION: ${VERSION:-unknown}
+        VERSION: ${GIT_COMMIT:-unknown}
     container_name: changeorderino-api
     restart: unless-stopped
     environment:
