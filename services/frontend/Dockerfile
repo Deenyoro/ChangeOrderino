@@ -47,10 +47,6 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # Write version file
 RUN echo "${VERSION}" > /usr/share/nginx/html/VERSION
 
-# Copy license files from project root
-COPY ../../LICENSE /usr/share/nginx/html/LICENSE
-COPY ../../THIRD_PARTY_LICENSES.md /usr/share/nginx/html/THIRD_PARTY_LICENSES.md
-
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 

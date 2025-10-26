@@ -49,7 +49,7 @@ const SystemInfoPage: React.FC = () => {
   useEffect(() => {
     Promise.all([
       fetch('/LICENSE').then(r => r.text()),
-      fetch('/THIRD_PARTY_LICENSES.md').then(r => r.text())
+      fetch('/THIRD-PARTY-LICENSES').then(r => r.text())
     ]).then(([license, thirdParty]) => {
       setChangeOrderinoLicense(license)
       setThirdPartyLicenses(thirdParty)

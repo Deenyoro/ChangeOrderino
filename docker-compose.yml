@@ -158,7 +158,7 @@ services:
       context: ./services/frontend
       dockerfile: Dockerfile
       args:
-        VERSION: ${VERSION:-unknown}
+        VERSION: ${GIT_COMMIT:-unknown}
         VITE_API_URL: ${VITE_API_URL}
         VITE_AUTH_ENABLED: ${VITE_AUTH_ENABLED}
         VITE_KEYCLOAK_URL: ${VITE_KEYCLOAK_URL}
