@@ -45,7 +45,8 @@ class TemplateService:
         project: Dict[str, Any],
         approval_link: str,
         company_logo_url: Optional[str] = None,
-        template_settings: Optional[Dict[str, str]] = None
+        template_settings: Optional[Dict[str, str]] = None,
+        company_settings: Optional[Dict[str, str]] = None
     ) -> tuple[str, str]:
         """
         Render initial RFCO send email
@@ -63,6 +64,13 @@ class TemplateService:
         try:
             # Use template settings or defaults
             settings = template_settings or {}
+            # Use company settings from database or fallback to config
+            company = company_settings or {
+                'company_name': config.COMPANY_NAME,
+                'company_email': config.COMPANY_EMAIL,
+                'company_phone': config.COMPANY_PHONE
+            }
+
             subject_template = settings.get('subject', 'RFCO {tnm_number} - {project_name}')
 
             # Replace variables in subject
@@ -75,15 +83,15 @@ class TemplateService:
             footer_template = settings.get('footer_text',
                 'If you have any questions about this change order, please contact us at {company_email} or {company_phone}.')
             footer_text = footer_template.format(
-                company_email=config.COMPANY_EMAIL,
-                company_phone=config.COMPANY_PHONE
+                company_email=company['company_email'],
+                company_phone=company['company_phone']
             )
 
             context = {
                 'subject': subject,
-                'company_name': config.COMPANY_NAME,
-                'company_email': config.COMPANY_EMAIL,
-                'company_phone': config.COMPANY_PHONE,
+                'company_name': company['company_name'],
+                'company_email': company['company_email'],
+                'company_phone': company['company_phone'],
                 'company_logo_url': company_logo_url,
                 'tnm_number': tnm_ticket['tnm_number'],
                 'rfco_number': tnm_ticket.get('rfco_number'),
@@ -140,7 +148,8 @@ class TemplateService:
         reminder_number: int,
         days_pending: int,
         company_logo_url: Optional[str] = None,
-        template_settings: Optional[Dict[str, str]] = None
+        template_settings: Optional[Dict[str, str]] = None,
+        company_settings: Optional[Dict[str, str]] = None
     ) -> tuple[str, str]:
         """
         Render reminder email
@@ -160,6 +169,13 @@ class TemplateService:
         try:
             # Use template settings or defaults
             settings = template_settings or {}
+            # Use company settings from database or fallback to config
+            company = company_settings or {
+                'company_name': config.COMPANY_NAME,
+                'company_email': config.COMPANY_EMAIL,
+                'company_phone': config.COMPANY_PHONE
+            }
+
             subject_template = settings.get('subject', 'REMINDER #{reminder_number}: RFCO {tnm_number} - {project_name}')
 
             # Replace variables in subject
@@ -171,9 +187,9 @@ class TemplateService:
 
             context = {
                 'subject': subject,
-                'company_name': config.COMPANY_NAME,
-                'company_email': config.COMPANY_EMAIL,
-                'company_phone': config.COMPANY_PHONE,
+                'company_name': company['company_name'],
+                'company_email': company['company_email'],
+                'company_phone': company['company_phone'],
                 'company_logo_url': company_logo_url,
                 'tnm_number': tnm_ticket['tnm_number'],
                 'rfco_number': tnm_ticket.get('rfco_number'),
@@ -217,7 +233,8 @@ class TemplateService:
         line_items: Optional[list[Dict[str, Any]]] = None,
         gc_notes: Optional[str] = None,
         company_logo_url: Optional[str] = None,
-        template_settings: Optional[Dict[str, str]] = None
+        template_settings: Optional[Dict[str, str]] = None,
+        company_settings: Optional[Dict[str, str]] = None
     ) -> tuple[str, str]:
         """
         Render approval confirmation email (sent to internal team)
@@ -237,6 +254,13 @@ class TemplateService:
         try:
             # Use template settings or defaults
             settings = template_settings or {}
+            # Use company settings from database or fallback to config
+            company = company_settings or {
+                'company_name': config.COMPANY_NAME,
+                'company_email': config.COMPANY_EMAIL,
+                'company_phone': config.COMPANY_PHONE
+            }
+
             status = tnm_ticket.get('status', 'unknown')
             status_label = status.replace('_', ' ').title()
 
@@ -249,9 +273,9 @@ class TemplateService:
 
             context = {
                 'subject': subject,
-                'company_name': config.COMPANY_NAME,
-                'company_email': config.COMPANY_EMAIL,
-                'company_phone': config.COMPANY_PHONE,
+                'company_name': company['company_name'],
+                'company_email': company['company_email'],
+                'company_phone': company['company_phone'],
                 'company_logo_url': company_logo_url,
                 'tnm_number': tnm_ticket['tnm_number'],
                 'rfco_number': tnm_ticket.get('rfco_number'),

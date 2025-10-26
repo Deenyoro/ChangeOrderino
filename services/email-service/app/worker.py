@@ -73,6 +73,23 @@ async def get_company_logo_url(session: AsyncSession) -> Optional[str]:
     return value if value else None
 
 
+async def get_company_settings(session: AsyncSession) -> Dict[str, str]:
+    """
+    Fetch company settings from app_settings
+
+    Args:
+        session: Database session
+
+    Returns:
+        Dictionary of company settings
+    """
+    return {
+        'company_name': await get_setting_value(session, 'COMPANY_NAME', config.COMPANY_NAME),
+        'company_email': await get_setting_value(session, 'COMPANY_EMAIL', config.COMPANY_EMAIL),
+        'company_phone': await get_setting_value(session, 'COMPANY_PHONE', config.COMPANY_PHONE),
+    }
+
+
 async def get_email_template_settings(session: AsyncSession, email_type: str) -> Dict[str, str]:
     """
     Fetch email template settings from app_settings
@@ -327,6 +344,9 @@ async def _send_rfco_email_async(
             # Fetch company logo URL
             company_logo_url = await get_company_logo_url(session)
 
+            # Fetch company settings from database
+            company_settings = await get_company_settings(session)
+
             # Fetch email template settings
             template_settings = await get_email_template_settings(session, 'rfco')
 
@@ -336,7 +356,8 @@ async def _send_rfco_email_async(
                 project=project_dict,
                 approval_link=approval_link,
                 company_logo_url=company_logo_url,
-                template_settings=template_settings
+                template_settings=template_settings,
+                company_settings=company_settings
             )
 
             # Prepare PDF attachment if provided
@@ -504,6 +525,9 @@ async def _send_reminder_email_async(
             # Fetch company logo URL
             company_logo_url = await get_company_logo_url(session)
 
+            # Fetch company settings from database
+            company_settings = await get_company_settings(session)
+
             # Fetch email template settings
             template_settings = await get_email_template_settings(session, 'reminder')
 
@@ -515,7 +539,8 @@ async def _send_reminder_email_async(
                 reminder_number=reminder_number,
                 days_pending=days_pending,
                 company_logo_url=company_logo_url,
-                template_settings=template_settings
+                template_settings=template_settings,
+                company_settings=company_settings
             )
 
             # Send email
@@ -636,6 +661,9 @@ async def _send_approval_confirmation_email_async(
             # Fetch company logo URL
             company_logo_url = await get_company_logo_url(session)
 
+            # Fetch company settings from database
+            company_settings = await get_company_settings(session)
+
             # Fetch email template settings
             template_settings = await get_email_template_settings(session, 'approval')
 
@@ -645,7 +673,8 @@ async def _send_approval_confirmation_email_async(
                 project=project_dict,
                 ticket_link=ticket_link,
                 company_logo_url=company_logo_url,
-                template_settings=template_settings
+                template_settings=template_settings,
+                company_settings=company_settings
             )
 
             # Send to each internal email
