@@ -56,20 +56,18 @@ export const Sidebar: React.FC = () => {
         </div>
 
         {/* Desktop collapse toggle */}
-        <div className="hidden lg:flex items-center justify-between h-12 px-2 border-b border-gray-200">
+        <div className="hidden lg:flex items-center justify-end gap-2 h-12 px-2 border-b border-gray-200">
           {!sidebarCollapsed && (
-            <div>
-              <div className="text-center">
-                <div className="text-xs text-gray-500">© 2025 KawaConnect LLC</div>
-                <a
-                  href="https://kawaconnect.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-blue-600 hover:text-blue-700 hover:underline"
-                >
-                  kawaconnect.com
-                </a>
-              </div>
+            <div className="text-center">
+              <div className="text-xs text-gray-500">© 2025 KawaConnect LLC</div>
+              <a
+                href="https://kawaconnect.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-blue-600 hover:text-blue-700 hover:underline"
+              >
+                kawaconnect.com
+              </a>
             </div>
           )}
           <button
