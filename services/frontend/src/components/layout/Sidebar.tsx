@@ -58,7 +58,7 @@ export const Sidebar: React.FC = () => {
         {/* Desktop collapse toggle */}
         <div className="hidden lg:flex items-center justify-between h-12 px-2 border-b border-gray-200">
           {!sidebarCollapsed && (
-            <div className="px-2">
+            <div>
               <div className="text-center">
                 <div className="text-xs text-gray-500">© 2025 KawaConnect LLC</div>
                 <a
