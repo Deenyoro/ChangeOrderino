@@ -7,6 +7,7 @@ import { Menu, LogOut, User } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useDispatch } from 'react-redux';
 import { toggleSidebar } from '../../store/slices/uiSlice';
+import { EmailNotificationBell } from '../common/EmailNotificationBell';
 
 export const Header: React.FC = () => {
   const { user, logout } = useAuth();
@@ -29,6 +30,7 @@ export const Header: React.FC = () => {
 
           {/* Right side */}
           <div className="flex items-center gap-4">
+            <EmailNotificationBell />
             <div className="flex items-center gap-2">
               <User className="w-5 h-5 text-gray-500" />
               <span className="text-sm font-medium text-gray-700">{user?.full_name}</span>

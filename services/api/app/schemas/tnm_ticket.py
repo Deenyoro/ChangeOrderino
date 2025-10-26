@@ -290,3 +290,31 @@ class BulkActionResponse(BaseModel):
     successful: int
     failed: int
     results: List[BulkActionResult]
+
+
+# ============ EDIT SCHEMAS ============
+
+class TNMTicketEditRequest(BaseModel):
+    """Request schema for editing TNM ticket fields"""
+    title: Optional[str] = Field(None, min_length=1, max_length=255)
+    description: Optional[str] = None
+    submitter_name: Optional[str] = Field(None, min_length=1, max_length=255)
+    submitter_email: Optional[EmailStr] = None
+    proposal_date: Optional[date] = None
+    response_date: Optional[date] = None
+    due_date: Optional[date] = None
+
+    # OH&P overrides
+    material_ohp_percent: Optional[Decimal] = Field(None, ge=0, le=100)
+    labor_ohp_percent: Optional[Decimal] = Field(None, ge=0, le=100)
+    equipment_ohp_percent: Optional[Decimal] = Field(None, ge=0, le=100)
+    subcontractor_ohp_percent: Optional[Decimal] = Field(None, ge=0, le=100)
+
+    # Labor rate overrides
+    rate_project_manager: Optional[Decimal] = Field(None, ge=0)
+    rate_superintendent: Optional[Decimal] = Field(None, ge=0)
+    rate_carpenter: Optional[Decimal] = Field(None, ge=0)
+    rate_laborer: Optional[Decimal] = Field(None, ge=0)
+
+    notes: Optional[str] = None
+    edit_reason: Optional[str] = Field(None, max_length=500)

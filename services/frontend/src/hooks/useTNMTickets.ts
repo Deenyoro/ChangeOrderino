@@ -197,3 +197,44 @@ export const useBulkMarkAsPaid = () => {
     },
   });
 };
+
+export const useEditTNMTicket = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: {
+        title?: string;
+        description?: string;
+        submitter_name?: string;
+        submitter_email?: string;
+        proposal_date?: string;
+        response_date?: string;
+        due_date?: string;
+        material_ohp_percent?: number;
+        labor_ohp_percent?: number;
+        equipment_ohp_percent?: number;
+        subcontractor_ohp_percent?: number;
+        rate_project_manager?: number;
+        rate_superintendent?: number;
+        rate_carpenter?: number;
+        rate_laborer?: number;
+        notes?: string;
+        edit_reason?: string;
+      };
+    }) => tnmTicketsApi.editTicket(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['tnm-tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['tnm-ticket', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['audit-logs', 'tnm_ticket', variables.id] });
+      toast.success('Ticket updated successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update ticket');
+    },
+  });
+};

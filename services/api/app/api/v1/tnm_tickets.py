@@ -32,6 +32,7 @@ from app.schemas.tnm_ticket import (
     BulkMarkAsPaidRequest,
     BulkActionResponse,
     BulkActionResult,
+    TNMTicketEditRequest,
 )
 from app.services.pdf_generator import pdf_generator
 from app.services.queue_service import queue_service
@@ -1228,3 +1229,139 @@ async def bulk_mark_tickets_as_paid(
         failed=failed,
         results=results
     )
+
+# ============ EDIT ENDPOINT ============
+
+@router.patch("/{ticket_id}/edit/", response_model=TNMTicketResponse)
+async def edit_tnm_ticket(
+    ticket_id: UUID,
+    edit_data: TNMTicketEditRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user),
+):
+    """
+    Edit TNM ticket fields with full audit logging
+
+    Allows updating any ticket field with comprehensive change tracking.
+    All changes are logged to audit_log table with before/after values.
+    """
+    # Fetch ticket
+    result = await db.execute(
+        select(TNMTicket).where(TNMTicket.id == ticket_id)
+    )
+    ticket = result.scalar_one_or_none()
+
+    if not ticket:
+        raise HTTPException(status_code=404, detail="TNM ticket not found")
+
+    # Track changes
+    changes = {}
+
+    # Update fields and track changes
+    if edit_data.title is not None and edit_data.title != ticket.title:
+        changes['title'] = {'old': ticket.title, 'new': edit_data.title}
+        ticket.title = edit_data.title
+
+    if edit_data.description is not None and edit_data.description != ticket.description:
+        changes['description'] = {'old': ticket.description or '', 'new': edit_data.description}
+        ticket.description = edit_data.description
+
+    if edit_data.submitter_name is not None and edit_data.submitter_name != ticket.submitter_name:
+        changes['submitter_name'] = {'old': ticket.submitter_name, 'new': edit_data.submitter_name}
+        ticket.submitter_name = edit_data.submitter_name
+
+    if edit_data.submitter_email is not None and edit_data.submitter_email != ticket.submitter_email:
+        changes['submitter_email'] = {'old': ticket.submitter_email, 'new': edit_data.submitter_email}
+        ticket.submitter_email = edit_data.submitter_email
+
+    if edit_data.proposal_date is not None and edit_data.proposal_date != ticket.proposal_date:
+        changes['proposal_date'] = {
+            'old': ticket.proposal_date.isoformat() if ticket.proposal_date else None,
+            'new': edit_data.proposal_date.isoformat()
+        }
+        ticket.proposal_date = edit_data.proposal_date
+
+    if edit_data.response_date is not None and edit_data.response_date != ticket.response_date:
+        changes['response_date'] = {
+            'old': ticket.response_date.isoformat() if ticket.response_date else None,
+            'new': edit_data.response_date.isoformat()
+        }
+        ticket.response_date = edit_data.response_date
+
+    if edit_data.due_date is not None and edit_data.due_date != ticket.due_date:
+        changes['due_date'] = {
+            'old': ticket.due_date.isoformat() if ticket.due_date else None,
+            'new': edit_data.due_date.isoformat()
+        }
+        ticket.due_date = edit_data.due_date
+
+    # OH&P Percentages
+    if edit_data.material_ohp_percent is not None and edit_data.material_ohp_percent != ticket.material_ohp_percent:
+        changes['material_ohp_percent'] = {'old': str(ticket.material_ohp_percent), 'new': str(edit_data.material_ohp_percent)}
+        ticket.material_ohp_percent = edit_data.material_ohp_percent
+
+    if edit_data.labor_ohp_percent is not None and edit_data.labor_ohp_percent != ticket.labor_ohp_percent:
+        changes['labor_ohp_percent'] = {'old': str(ticket.labor_ohp_percent), 'new': str(edit_data.labor_ohp_percent)}
+        ticket.labor_ohp_percent = edit_data.labor_ohp_percent
+
+    if edit_data.equipment_ohp_percent is not None and edit_data.equipment_ohp_percent != ticket.equipment_ohp_percent:
+        changes['equipment_ohp_percent'] = {'old': str(ticket.equipment_ohp_percent), 'new': str(edit_data.equipment_ohp_percent)}
+        ticket.equipment_ohp_percent = edit_data.equipment_ohp_percent
+
+    if edit_data.subcontractor_ohp_percent is not None and edit_data.subcontractor_ohp_percent != ticket.subcontractor_ohp_percent:
+        changes['subcontractor_ohp_percent'] = {'old': str(ticket.subcontractor_ohp_percent), 'new': str(edit_data.subcontractor_ohp_percent)}
+        ticket.subcontractor_ohp_percent = edit_data.subcontractor_ohp_percent
+
+    # Labor Rates
+    if edit_data.rate_project_manager is not None and edit_data.rate_project_manager != ticket.rate_project_manager:
+        changes['rate_project_manager'] = {'old': str(ticket.rate_project_manager), 'new': str(edit_data.rate_project_manager)}
+        ticket.rate_project_manager = edit_data.rate_project_manager
+
+    if edit_data.rate_superintendent is not None and edit_data.rate_superintendent != ticket.rate_superintendent:
+        changes['rate_superintendent'] = {'old': str(ticket.rate_superintendent), 'new': str(edit_data.rate_superintendent)}
+        ticket.rate_superintendent = edit_data.rate_superintendent
+
+    if edit_data.rate_carpenter is not None and edit_data.rate_carpenter != ticket.rate_carpenter:
+        changes['rate_carpenter'] = {'old': str(ticket.rate_carpenter), 'new': str(edit_data.rate_carpenter)}
+        ticket.rate_carpenter = edit_data.rate_carpenter
+
+    if edit_data.rate_laborer is not None and edit_data.rate_laborer != ticket.rate_laborer:
+        changes['rate_laborer'] = {'old': str(ticket.rate_laborer), 'new': str(edit_data.rate_laborer)}
+        ticket.rate_laborer = edit_data.rate_laborer
+
+    # Update notes if provided
+    if edit_data.notes:
+        note_entry = f"[Manual Edit by {current_user.email} on {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}]: {edit_data.notes}"
+        if ticket.notes:
+            ticket.notes += f"\n\n{note_entry}"
+        else:
+            ticket.notes = note_entry
+
+    # Only log if there are actual changes
+    if changes:
+        # Add edit reason to changes
+        if edit_data.edit_reason:
+            changes['edit_reason'] = edit_data.edit_reason
+
+        # Log the edit
+        await audit_service.log(
+            db=db,
+            entity_type='tnm_ticket',
+            entity_id=ticket_id,
+            action='manual_edit',
+            user_id=UUID(current_user.sub),
+            changes=changes,
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get('user-agent'),
+        )
+
+        logger.info(
+            f"Manual edit for ticket {ticket.tnm_number} by {current_user.email}. "
+            f"Fields changed: {', '.join(changes.keys())}"
+        )
+
+    await db.commit()
+    await db.refresh(ticket)
+
+    return ticket

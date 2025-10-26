@@ -20,6 +20,7 @@ from app.api.v1 import (
     dashboard,
     line_items,
     email_health,
+    email_logs,
     settings as settings_router,
 )
 
@@ -95,6 +96,7 @@ app.include_router(assets.router, prefix="/v1/assets", tags=["Assets"])
 app.include_router(audit.router, prefix="/v1/audit", tags=["Audit Logs"])
 app.include_router(dashboard.router, prefix="/v1/dashboard", tags=["Dashboard"])
 app.include_router(email_health.router, prefix="/v1", tags=["Email Service"])
+app.include_router(email_logs.router, prefix="/v1/emails", tags=["Email Logs"])
 app.include_router(settings_router.router, prefix="/v1", tags=["Settings"])
 
 

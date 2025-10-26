@@ -5,7 +5,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { ArrowLeft, Edit, Trash2, Send, Mail, FileDown, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Send, Mail, FileDown, CheckCircle, XCircle, AlertCircle, History, FileText } from 'lucide-react';
 import {
   useTNMTicket,
   useUpdateTNMStatus,
@@ -14,7 +14,9 @@ import {
   useUpdateTNMTicket,
   useSendReminder,
   useManualApprovalOverride,
+  useEditTNMTicket,
 } from '../hooks/useTNMTickets';
+import { useEntityAuditLogs } from '../hooks/useAudit';
 import { useProject } from '../hooks/useProjects';
 import { tnmTicketsApi } from '../api/tnmTickets';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
@@ -40,8 +42,10 @@ export const TNMDetailPage: React.FC = () => {
   const [isManualApprovalModalOpen, setIsManualApprovalModalOpen] = useState(false);
   const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
   const [isMarkPaidModalOpen, setIsMarkPaidModalOpen] = useState(false);
+  const [isAuditLogModalOpen, setIsAuditLogModalOpen] = useState(false);
   const [paidNotes, setPaidNotes] = useState('');
   const [gcEmail, setGcEmail] = useState('');
+  const [overrideMode, setOverrideMode] = useState<'approve' | 'edit'>('approve');
   const [customOHP, setCustomOHP] = useState({
     labor: 0,
     material: 0,
@@ -54,15 +58,36 @@ export const TNMDetailPage: React.FC = () => {
     reason: '',
     notes: '',
   });
+  const [editData, setEditData] = useState({
+    title: '',
+    description: '',
+    submitter_name: '',
+    submitter_email: '',
+    proposal_date: '',
+    response_date: '',
+    due_date: '',
+    material_ohp_percent: 0,
+    labor_ohp_percent: 0,
+    equipment_ohp_percent: 0,
+    subcontractor_ohp_percent: 0,
+    rate_project_manager: 0,
+    rate_superintendent: 0,
+    rate_carpenter: 0,
+    rate_laborer: 0,
+    notes: '',
+    edit_reason: '',
+  });
 
   const { data: ticket, isLoading } = useTNMTicket(id!);
   const { data: project } = useProject(ticket?.project_id || '');
+  const { data: auditLogs, isLoading: auditLoading } = useEntityAuditLogs('tnm_ticket', id);
   const updateStatusMutation = useUpdateTNMStatus();
   const sendMutation = useSendTNMForApproval();
   const deleteMutation = useDeleteTNMTicket();
   const updateMutation = useUpdateTNMTicket();
   const remindMutation = useSendReminder();
   const manualApprovalMutation = useManualApprovalOverride();
+  const editMutation = useEditTNMTicket();
 
   React.useEffect(() => {
     if (ticket) {
@@ -80,6 +105,30 @@ export const TNMDetailPage: React.FC = () => {
       setGcEmail(project.gc_email || '');
     }
   }, [project]);
+
+  React.useEffect(() => {
+    if (ticket) {
+      setEditData({
+        title: ticket.title,
+        description: ticket.description || '',
+        submitter_name: ticket.submitter_name,
+        submitter_email: ticket.submitter_email,
+        proposal_date: ticket.proposal_date,
+        response_date: ticket.response_date || '',
+        due_date: ticket.due_date || '',
+        material_ohp_percent: ticket.material_ohp_percent,
+        labor_ohp_percent: ticket.labor_ohp_percent,
+        equipment_ohp_percent: ticket.equipment_ohp_percent,
+        subcontractor_ohp_percent: ticket.subcontractor_ohp_percent,
+        rate_project_manager: ticket.rate_project_manager || 0,
+        rate_superintendent: ticket.rate_superintendent || 0,
+        rate_carpenter: ticket.rate_carpenter || 0,
+        rate_laborer: ticket.rate_laborer || 0,
+        notes: '',
+        edit_reason: '',
+      });
+    }
+  }, [ticket]);
 
   if (isLoading || !ticket) {
     return <LoadingSpinner />;
@@ -182,6 +231,26 @@ export const TNMDetailPage: React.FC = () => {
     } catch (error: any) {
       console.error('Mark as paid error:', error);
       toast.error(error.response?.data?.detail || 'Failed to update payment status');
+    }
+  };
+
+  const handleEditTicket = async () => {
+    if (!editData.edit_reason?.trim()) {
+      toast.error('Please provide a reason for this edit');
+      return;
+    }
+
+    try {
+      await editMutation.mutateAsync({
+        id: ticket.id,
+        data: editData,
+      });
+      setIsManualApprovalModalOpen(false);
+      setOverrideMode('approve');
+      setEditData({ ...editData, notes: '', edit_reason: '' });
+    } catch (error: any) {
+      console.error('Edit error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to edit ticket');
     }
   };
 
@@ -307,6 +376,10 @@ export const TNMDetailPage: React.FC = () => {
           <Button variant="secondary" onClick={handleDownloadPDF} isLoading={isDownloadingPDF}>
             <FileDown className="w-4 h-4 mr-2" />
             Download PDF
+          </Button>
+          <Button variant="secondary" onClick={() => setIsAuditLogModalOpen(true)}>
+            <History className="w-4 h-4 mr-2" />
+            View Audit Log
           </Button>
         </div>
       </div>
@@ -618,20 +691,56 @@ export const TNMDetailPage: React.FC = () => {
       {/* Manual Approval Override Modal */}
       <Modal
         isOpen={isManualApprovalModalOpen}
-        onClose={() => setIsManualApprovalModalOpen(false)}
-        title={manualApprovalData.status === 'sent' ? 'Undo Approval' : 'Manual Approval Override'}
+        onClose={() => {
+          setIsManualApprovalModalOpen(false);
+          setOverrideMode('approve');
+        }}
+        title={overrideMode === 'edit' ? 'Edit Ticket' : (manualApprovalData.status === 'sent' ? 'Undo Approval' : 'Manual Approval Override')}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setIsManualApprovalModalOpen(false)}>
+            <Button variant="secondary" onClick={() => {
+              setIsManualApprovalModalOpen(false);
+              setOverrideMode('approve');
+            }}>
               Cancel
             </Button>
-            <Button onClick={handleManualApproval} isLoading={manualApprovalMutation.isPending}>
-              {manualApprovalData.status === 'sent' ? 'Confirm Undo' : 'Submit Override'}
+            <Button
+              onClick={overrideMode === 'edit' ? handleEditTicket : handleManualApproval}
+              isLoading={overrideMode === 'edit' ? editMutation.isPending : manualApprovalMutation.isPending}
+            >
+              {overrideMode === 'edit' ? 'Save Changes' : (manualApprovalData.status === 'sent' ? 'Confirm Undo' : 'Submit Override')}
             </Button>
           </>
         }
       >
-        <div className="space-y-5">
+        {/* Mode Selector Tabs */}
+        <div className="flex gap-2 mb-6 border-b border-gray-200">
+          <button
+            onClick={() => setOverrideMode('approve')}
+            className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${
+              overrideMode === 'approve'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Edit className="w-4 h-4 inline mr-2" />
+            Approval Override
+          </button>
+          <button
+            onClick={() => setOverrideMode('edit')}
+            className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${
+              overrideMode === 'edit'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <FileText className="w-4 h-4 inline mr-2" />
+            Edit Ticket
+          </button>
+        </div>
+
+        {overrideMode === 'approve' ? (
+          <div className="space-y-5">
           {/* Enhanced intro with icon */}
           <div className={`border rounded-lg p-4 flex gap-3 ${
             manualApprovalData.status === 'sent'
@@ -841,6 +950,302 @@ export const TNMDetailPage: React.FC = () => {
               )}
             </div>
           </div>
+          </div>
+        ) : (
+          /* Edit Ticket Mode */
+          <div className="space-y-5">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-blue-900 font-medium mb-1">Edit Ticket Fields</p>
+              <p className="text-sm text-blue-700">
+                Make changes to ticket fields. All changes will be logged in the audit trail.
+              </p>
+            </div>
+
+            {/* Basic Info */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-gray-900">Basic Information</h3>
+              <Input
+                label="Title"
+                value={editData.title}
+                onChange={(e) => setEditData({ ...editData, title: e.target.value })}
+              />
+              <div>
+                <label className="label">Description</label>
+                <textarea
+                  className="input-field min-h-[80px]"
+                  value={editData.description}
+                  onChange={(e) => setEditData({ ...editData, description: e.target.value })}
+                />
+              </div>
+              <Input
+                label="Submitter Name"
+                value={editData.submitter_name}
+                onChange={(e) => setEditData({ ...editData, submitter_name: e.target.value })}
+              />
+              <Input
+                label="Submitter Email"
+                type="email"
+                value={editData.submitter_email}
+                onChange={(e) => setEditData({ ...editData, submitter_email: e.target.value })}
+              />
+            </div>
+
+            {/* Dates */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-gray-900">Dates</h3>
+              <Input
+                label="Proposal Date"
+                type="date"
+                value={editData.proposal_date}
+                onChange={(e) => setEditData({ ...editData, proposal_date: e.target.value })}
+              />
+              <Input
+                label="Response Date (optional)"
+                type="date"
+                value={editData.response_date}
+                onChange={(e) => setEditData({ ...editData, response_date: e.target.value })}
+              />
+              <Input
+                label="Due Date (optional)"
+                type="date"
+                value={editData.due_date}
+                onChange={(e) => setEditData({ ...editData, due_date: e.target.value })}
+              />
+            </div>
+
+            {/* OH&P Percentages */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-gray-900">OH&P Percentages</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="Material OH&P %"
+                  type="number"
+                  step="0.01"
+                  value={editData.material_ohp_percent}
+                  onChange={(e) => setEditData({ ...editData, material_ohp_percent: parseFloat(e.target.value) || 0 })}
+                />
+                <Input
+                  label="Labor OH&P %"
+                  type="number"
+                  step="0.01"
+                  value={editData.labor_ohp_percent}
+                  onChange={(e) => setEditData({ ...editData, labor_ohp_percent: parseFloat(e.target.value) || 0 })}
+                />
+                <Input
+                  label="Equipment OH&P %"
+                  type="number"
+                  step="0.01"
+                  value={editData.equipment_ohp_percent}
+                  onChange={(e) => setEditData({ ...editData, equipment_ohp_percent: parseFloat(e.target.value) || 0 })}
+                />
+                <Input
+                  label="Subcontractor OH&P %"
+                  type="number"
+                  step="0.01"
+                  value={editData.subcontractor_ohp_percent}
+                  onChange={(e) => setEditData({ ...editData, subcontractor_ohp_percent: parseFloat(e.target.value) || 0 })}
+                />
+              </div>
+            </div>
+
+            {/* Labor Rates */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-gray-900">Labor Rates ($/hr)</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="Project Manager"
+                  type="number"
+                  step="0.01"
+                  value={editData.rate_project_manager}
+                  onChange={(e) => setEditData({ ...editData, rate_project_manager: parseFloat(e.target.value) || 0 })}
+                />
+                <Input
+                  label="Superintendent"
+                  type="number"
+                  step="0.01"
+                  value={editData.rate_superintendent}
+                  onChange={(e) => setEditData({ ...editData, rate_superintendent: parseFloat(e.target.value) || 0 })}
+                />
+                <Input
+                  label="Carpenter"
+                  type="number"
+                  step="0.01"
+                  value={editData.rate_carpenter}
+                  onChange={(e) => setEditData({ ...editData, rate_carpenter: parseFloat(e.target.value) || 0 })}
+                />
+                <Input
+                  label="Laborer"
+                  type="number"
+                  step="0.01"
+                  value={editData.rate_laborer}
+                  onChange={(e) => setEditData({ ...editData, rate_laborer: parseFloat(e.target.value) || 0 })}
+                />
+              </div>
+            </div>
+
+            {/* Edit Reason (Required) */}
+            <Input
+              label="Reason for Edit *"
+              value={editData.edit_reason}
+              onChange={(e) => setEditData({ ...editData, edit_reason: e.target.value })}
+              placeholder="e.g., Correcting OH&P rate per contract amendment"
+              helperText="Required - explain why you're making these changes"
+            />
+
+            {/* Notes */}
+            <div>
+              <label className="label">Additional Notes (optional)</label>
+              <textarea
+                className="input-field min-h-[60px]"
+                value={editData.notes}
+                onChange={(e) => setEditData({ ...editData, notes: e.target.value })}
+                placeholder="Any additional context..."
+              />
+            </div>
+
+            {/* Warning */}
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+              <div className="flex gap-3">
+                <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-yellow-900 mb-1">Audit Trail</p>
+                  <p className="text-sm text-yellow-800">
+                    All changes will be permanently logged with your email, timestamp, and reason.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Audit Log Modal */}
+      <Modal
+        isOpen={isAuditLogModalOpen}
+        onClose={() => setIsAuditLogModalOpen(false)}
+        title={`Audit Log - ${ticket.tnm_number}`}
+        size="xl"
+      >
+        <div className="space-y-4">
+          {auditLoading ? (
+            <div className="text-center py-8">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <p className="mt-2 text-sm text-gray-500">Loading audit history...</p>
+            </div>
+          ) : !auditLogs || auditLogs.length === 0 ? (
+            <div className="text-center py-8">
+              <History className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500">No audit logs found for this ticket.</p>
+            </div>
+          ) : (
+            <div className="space-y-4 max-h-[600px] overflow-y-auto">
+              {auditLogs.map((log) => (
+                <div
+                  key={log.id}
+                  className="border border-gray-200 rounded-lg p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
+                >
+                  {/* Header */}
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                          log.action === 'create'
+                            ? 'bg-indigo-100 text-indigo-800'
+                            : log.action === 'manual_edit' || log.action === 'update'
+                            ? 'bg-purple-100 text-purple-800'
+                            : log.action === 'delete'
+                            ? 'bg-red-100 text-red-800'
+                            : log.action === 'send' || log.action === 'send_reminder'
+                            ? 'bg-cyan-100 text-cyan-800'
+                            : log.action === 'status_change'
+                            ? 'bg-blue-100 text-blue-800'
+                            : log.action === 'manual_approval_override' || log.action === 'bulk_approval_override'
+                            ? 'bg-orange-100 text-orange-800'
+                            : log.action === 'mark_as_paid' || log.action === 'bulk_mark_as_paid'
+                            ? 'bg-green-100 text-green-800'
+                            : log.action === 'mark_as_unpaid' || log.action === 'bulk_mark_as_unpaid'
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}
+                      >
+                        {log.action.replace(/_/g, ' ').toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {formatDateTime(log.created_at)}
+                    </div>
+                  </div>
+
+                  {/* User Info */}
+                  {log.user_id && (
+                    <div className="text-sm text-gray-600 mb-3">
+                      <span className="font-medium">User:</span> {log.user_id}
+                    </div>
+                  )}
+
+                  {/* Changes */}
+                  {log.changes && Object.keys(log.changes).length > 0 ? (
+                    <div className="space-y-2">
+                      <div className="text-sm font-medium text-gray-700">Changes:</div>
+                      <div className="bg-white rounded border border-gray-200 p-3 space-y-2">
+                        {Object.entries(log.changes).map(([field, change]) => {
+                          const changeObj = change as { old: any; new: any };
+                          const oldValue = changeObj.old;
+                          const newValue = changeObj.new;
+
+                          return (
+                            <div key={field} className="text-sm">
+                              <div className="font-medium text-gray-700 mb-1">
+                                {field.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}:
+                              </div>
+                              <div className="flex items-center gap-2 pl-3">
+                                <div className="flex-1">
+                                  <span className="text-red-600 line-through">
+                                    {oldValue === null || oldValue === undefined || oldValue === ''
+                                      ? '(empty)'
+                                      : String(oldValue)}
+                                  </span>
+                                </div>
+                                <span className="text-gray-400">→</span>
+                                <div className="flex-1">
+                                  <span className="text-green-600 font-medium">
+                                    {newValue === null || newValue === undefined || newValue === ''
+                                      ? '(empty)'
+                                      : String(newValue)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-500 italic">No detailed changes recorded</div>
+                  )}
+
+                  {/* IP and User Agent */}
+                  {(log.ip_address || log.user_agent) && (
+                    <div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-500 space-y-1">
+                      {log.ip_address && (
+                        <div>
+                          <span className="font-medium">IP:</span> {log.ip_address}
+                        </div>
+                      )}
+                      {log.user_agent && (
+                        <div>
+                          <span className="font-medium">User Agent:</span>{' '}
+                          <span className="truncate inline-block max-w-md" title={log.user_agent}>
+                            {log.user_agent}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </Modal>
 

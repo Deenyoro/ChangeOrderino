@@ -388,7 +388,29 @@ async def _send_rfco_email_async(
                 logger.info(f"✓ Successfully sent RFCO email for ticket {tnm_ticket_id}")
                 return True
             else:
-                logger.error(f"✗ Failed to send RFCO email for ticket {tnm_ticket_id}")
+                # FAILED - Retry up to 3 times with exponential backoff
+                logger.error(f"✗ Failed to send RFCO email for ticket {tnm_ticket_id} (attempt {retry_count + 1})")
+
+                if retry_count < 3:
+                    # Exponential backoff: 5 min, 15 min, 30 min
+                    delay_minutes = [5, 15, 30][retry_count]
+                    retry_time = datetime.now(timezone.utc) + timedelta(minutes=delay_minutes)
+
+                    # Schedule retry
+                    reminder_scheduler.scheduler.enqueue_at(
+                        retry_time,
+                        'app.worker.send_rfco_email',
+                        tnm_ticket_id=tnm_ticket_id,
+                        to_email=to_email,
+                        approval_token=approval_token,
+                        retry_count=retry_count + 1,
+                        pdf_base64=pdf_base64,
+                        timeout='10m'
+                    )
+                    logger.warning(f"Scheduled RFCO email retry #{retry_count + 1} in {delay_minutes} minutes")
+                else:
+                    logger.error(f"Maximum retries reached for RFCO email {tnm_ticket_id} - FAILED PERMANENTLY")
+
                 return False
 
         except Exception as e:
@@ -531,20 +553,38 @@ async def _send_reminder_email_async(
                     should_schedule_next = True
 
                 if should_schedule_next:
+                    # Bypass max check if auto-reminders are enabled
+                    bypass_max = ticket.send_reminders_until_accepted or ticket.send_reminders_until_paid
                     reminder_scheduler.schedule_reminder(
                         tnm_ticket_id=tnm_ticket_id,
                         to_email=to_email,
                         approval_token=approval_token,
-                        reminder_number=reminder_number + 1
+                        reminder_number=reminder_number + 1,
+                        bypass_max_check=bypass_max
                     )
-                    logger.info(f"Scheduled reminder #{reminder_number + 1} for ticket {tnm_ticket_id}")
+                    logger.info(f"Scheduled reminder #{reminder_number + 1} for ticket {tnm_ticket_id} (bypass_max={bypass_max})")
                 else:
                     logger.info(f"Max reminders ({config.REMINDER_MAX_RETRIES}) reached for ticket {tnm_ticket_id}")
 
                 logger.info(f"✓ Successfully sent reminder #{reminder_number} for ticket {tnm_ticket_id}")
                 return True
             else:
+                # FAILED - Retry the same reminder after 1 hour (up to 3 attempts)
                 logger.error(f"✗ Failed to send reminder #{reminder_number} for ticket {tnm_ticket_id}")
+
+                # For critical reminders (auto-reminders), retry after 1 hour
+                if (ticket.send_reminders_until_accepted or ticket.send_reminders_until_paid) and reminder_number <= 100:
+                    retry_time = datetime.now(timezone.utc) + timedelta(hours=1)
+                    reminder_scheduler.schedule_reminder(
+                        tnm_ticket_id=tnm_ticket_id,
+                        to_email=to_email,
+                        approval_token=approval_token,
+                        reminder_number=reminder_number,  # Same number = retry
+                        schedule_time=retry_time,
+                        bypass_max_check=True
+                    )
+                    logger.warning(f"Scheduled retry for failed reminder #{reminder_number} in 1 hour")
+
                 return False
 
         except Exception as e:

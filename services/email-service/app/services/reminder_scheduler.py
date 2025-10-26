@@ -31,7 +31,8 @@ class ReminderScheduler:
         to_email: str,
         approval_token: str,
         reminder_number: int,
-        schedule_time: Optional[datetime] = None
+        schedule_time: Optional[datetime] = None,
+        bypass_max_check: bool = False
     ) -> Optional[str]:
         """
         Schedule a reminder email
@@ -42,6 +43,7 @@ class ReminderScheduler:
             approval_token: Approval token for link
             reminder_number: Which reminder this is (1, 2, 3, etc.)
             schedule_time: When to send (defaults to N days from now)
+            bypass_max_check: If True, ignore max retries limit (for auto-reminders)
 
         Returns:
             Job ID or None if failed
@@ -50,7 +52,8 @@ class ReminderScheduler:
             logger.info("Reminders are disabled")
             return None
 
-        if reminder_number > self.reminder_max_retries:
+        # Only check max retries if not bypassed (auto-reminders bypass this)
+        if not bypass_max_check and reminder_number > self.reminder_max_retries:
             logger.info(f"Max reminders ({self.reminder_max_retries}) reached for ticket {tnm_ticket_id}")
             return None
 

@@ -69,6 +69,12 @@ export interface TNMTicket {
   subcontractor_ohp_percent: number;
   subcontractor_total: number;
 
+  // Labor rate overrides
+  rate_project_manager?: number;
+  rate_superintendent?: number;
+  rate_carpenter?: number;
+  rate_laborer?: number;
+
   proposal_amount: number;
   approved_amount: number;
 

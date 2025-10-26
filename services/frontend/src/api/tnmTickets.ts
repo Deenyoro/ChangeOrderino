@@ -142,4 +142,31 @@ export const tnmTicketsApi = {
     }>('v1/tnm-tickets/bulk/mark-paid/', data);
     return response.data;
   },
+
+  // Edit TNM ticket
+  editTicket: async (
+    id: string,
+    data: {
+      title?: string;
+      description?: string;
+      submitter_name?: string;
+      submitter_email?: string;
+      proposal_date?: string;
+      response_date?: string;
+      due_date?: string;
+      material_ohp_percent?: number;
+      labor_ohp_percent?: number;
+      equipment_ohp_percent?: number;
+      subcontractor_ohp_percent?: number;
+      rate_project_manager?: number;
+      rate_superintendent?: number;
+      rate_carpenter?: number;
+      rate_laborer?: number;
+      notes?: string;
+      edit_reason?: string;
+    }
+  ) => {
+    const response = await apiClient.patch<TNMTicket>(`v1/tnm-tickets/${id}/edit/`, data);
+    return response.data;
+  },
 };
