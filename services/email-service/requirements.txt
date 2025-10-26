@@ -19,7 +19,7 @@ asyncpg==0.30.0
 psycopg2-binary==2.9.10
 
 # Configuration
-python-dotenv==1.0.1
+python-dotenv==1.2.1
 
 # Utilities
 python-dateutil==2.9.0
