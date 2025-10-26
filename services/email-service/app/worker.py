@@ -61,16 +61,26 @@ async def get_setting_value(session: AsyncSession, key: str, default: str = "") 
 
 async def get_company_logo_url(session: AsyncSession) -> Optional[str]:
     """
-    Fetch company logo URL from app_settings
+    Fetch company logo URL from app_settings and convert to absolute URL
 
     Args:
         session: Database session
 
     Returns:
-        Logo URL or None if not set
+        Absolute logo URL or None if not set
     """
     value = await get_setting_value(session, 'COMPANY_LOGO_URL')
-    return value if value else None
+    if not value:
+        return None
+
+    # Convert relative URL to absolute URL for email compatibility
+    if value.startswith('/'):
+        # Remove trailing slash from FRONTEND_URL if present
+        base_url = config.FRONTEND_URL.rstrip('/')
+        return f"{base_url}{value}"
+
+    # Already absolute URL
+    return value
 
 
 async def get_company_settings(session: AsyncSession) -> Dict[str, str]:
