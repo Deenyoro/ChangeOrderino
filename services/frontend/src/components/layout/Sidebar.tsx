@@ -43,7 +43,7 @@ export const Sidebar: React.FC = () => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 z-50 h-full bg-white border-r border-gray-200 transform transition-all duration-200 ease-in-out lg:translate-x-0 lg:static lg:z-auto ${
+        className={`fixed top-0 left-0 z-50 h-full bg-white border-r border-gray-200 transform transition-all duration-200 ease-in-out lg:translate-x-0 lg:static lg:z-auto flex flex-col ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } ${sidebarCollapsed ? 'w-16' : 'w-64'}`}
       >
@@ -70,7 +70,7 @@ export const Sidebar: React.FC = () => {
           </button>
         </div>
 
-        <nav className="px-2 py-4 space-y-1">
+        <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
           {filteredNavigation.map((item) => (
             <NavLink
               key={item.name}
@@ -90,6 +90,23 @@ export const Sidebar: React.FC = () => {
             </NavLink>
           ))}
         </nav>
+
+        {/* Footer */}
+        {!sidebarCollapsed && (
+          <div className="px-4 pb-3 pt-2 border-t border-gray-200">
+            <div className="text-center">
+              <div className="text-xs text-gray-500">© 2025 KawaConnect LLC</div>
+              <a
+                href="https://kawaconnect.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-blue-600 hover:text-blue-700 hover:underline"
+              >
+                kawaconnect.com
+              </a>
+            </div>
+          </div>
+        )}
       </aside>
     </>
   );
