@@ -141,7 +141,7 @@ export const useManualApprovalOverride = () => {
     }: {
       id: string;
       data: {
-        status: 'approved' | 'denied' | 'partially_approved';
+        status: 'approved' | 'denied' | 'partially_approved' | 'sent';
         approved_amount?: number;
         reason?: string;
         notes?: string;
@@ -154,6 +154,46 @@ export const useManualApprovalOverride = () => {
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to update approval status');
+    },
+  });
+};
+
+export const useBulkApprove = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: {
+      ticket_ids: string[];
+      status: 'approved' | 'denied' | 'partially_approved' | 'sent';
+      approved_amount?: number;
+      reason?: string;
+      notes?: string;
+    }) => tnmTicketsApi.bulkApprove(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tnm-tickets'] });
+      toast.success('Tickets updated successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to bulk approve tickets');
+    },
+  });
+};
+
+export const useBulkMarkAsPaid = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: {
+      ticket_ids: string[];
+      is_paid: boolean;
+      notes?: string;
+    }) => tnmTicketsApi.bulkMarkAsPaid(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tnm-tickets'] });
+      toast.success('Payment status updated successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update payment status');
     },
   });
 };

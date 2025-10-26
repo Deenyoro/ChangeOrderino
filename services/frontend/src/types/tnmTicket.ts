@@ -49,6 +49,7 @@ export interface TNMTicket {
   submitter_email: string;
   proposal_date: string;
   response_date?: string;
+  due_date?: string;
   status: TNMStatus;
 
   // Totals
@@ -80,11 +81,18 @@ export interface TNMTicket {
   last_email_sent_at?: string;
   reminder_count: number;
   last_reminder_sent_at?: string;
+  send_reminders_until_accepted: boolean;
+  send_reminders_until_paid: boolean;
 
   // GC approval tracking
   approval_token?: string;
   approval_token_expires_at?: string;
   viewed_at?: string;
+
+  // Payment tracking
+  is_paid: number;
+  paid_date?: string;
+  paid_by?: string;
 
   notes?: string;
   metadata?: Record<string, any>;
@@ -107,6 +115,9 @@ export interface TNMTicketFormData {
   submitter_name: string;
   submitter_email: string;
   proposal_date: string;
+  due_date?: string;
+  send_reminders_until_accepted?: boolean;
+  send_reminders_until_paid?: boolean;
   labor_items?: LaborItem[];
   material_items?: MaterialItem[];
   equipment_items?: EquipmentItem[];

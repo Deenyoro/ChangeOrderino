@@ -17,6 +17,7 @@ router = APIRouter()
 @router.get("/stats")
 async def get_dashboard_stats(
     project_id: Optional[UUID] = Query(None),
+    time_range: Optional[str] = Query(None, description="week, month, year, 2years, 3years, or 'custom' with date_from/date_to"),
     date_from: Optional[str] = Query(None),
     date_to: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
@@ -27,12 +28,37 @@ async def get_dashboard_stats(
 
     Provides:
     - Counts by status
-    - Total amounts
+    - Total amounts (including paid tickets)
     - Recent activity
     - Pending items
     - Performance metrics
     - Breakdown by project
+
+    Time Range Options:
+    - week: Last 7 days
+    - month: Last 30 days
+    - year: Last 365 days
+    - 2years: Last 2 years
+    - 3years: Last 3 years
+    - custom: Use date_from and date_to parameters
+    - none: All time (default)
     """
+    # ============ HANDLE TIME RANGE ============
+    now = datetime.utcnow()
+
+    if time_range:
+        if time_range == "week":
+            date_from = (now - timedelta(days=7)).isoformat()
+        elif time_range == "month":
+            date_from = (now - timedelta(days=30)).isoformat()
+        elif time_range == "year":
+            date_from = (now - timedelta(days=365)).isoformat()
+        elif time_range == "2years":
+            date_from = (now - timedelta(days=730)).isoformat()
+        elif time_range == "3years":
+            date_from = (now - timedelta(days=1095)).isoformat()
+        # For 'custom', use the provided date_from and date_to
+
     # ============ COUNTS BY STATUS ============
 
     counts_by_status = {}
@@ -83,6 +109,24 @@ async def get_dashboard_stats(
         approved_query = approved_query.where(*base_query_filters)
     approved_sum_result = await db.execute(approved_query)
     total_approved_amount = float(approved_sum_result.scalar() or 0)
+
+    # Count of paid tickets
+    paid_count_query = select(func.count(TNMTicket.id)).where(
+        TNMTicket.is_paid == 1
+    )
+    if base_query_filters:
+        paid_count_query = paid_count_query.where(*base_query_filters)
+    paid_count_result = await db.execute(paid_count_query)
+    paid_ticket_count = paid_count_result.scalar() or 0
+
+    # Sum of paid amounts
+    paid_sum_query = select(func.sum(TNMTicket.approved_amount)).where(
+        TNMTicket.is_paid == 1
+    )
+    if base_query_filters:
+        paid_sum_query = paid_sum_query.where(*base_query_filters)
+    paid_sum_result = await db.execute(paid_sum_query)
+    total_paid_amount = float(paid_sum_result.scalar() or 0)
 
     # Approval rate
     approval_rate = (
@@ -281,6 +325,8 @@ async def get_dashboard_stats(
             "total_proposal_amount": total_proposal_amount,
             "total_approved_amount": total_approved_amount,
             "approval_rate": round(approval_rate, 1),
+            "paid_ticket_count": paid_ticket_count,
+            "total_paid_amount": total_paid_amount,
         },
         "recent_activity": {
             "created_this_week": created_this_week,

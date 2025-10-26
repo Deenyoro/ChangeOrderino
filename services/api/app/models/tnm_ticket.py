@@ -1,5 +1,5 @@
 """TNM Ticket model"""
-from sqlalchemy import Column, String, Text, Numeric, Integer, Date, DateTime, func, ForeignKey, Enum as SQLEnum
+from sqlalchemy import Column, String, Text, Numeric, Integer, Date, DateTime, Boolean, func, ForeignKey, Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import UUID, ARRAY, JSONB
 from sqlalchemy.orm import relationship
 import uuid
@@ -45,6 +45,7 @@ class TNMTicket(Base):
     # Dates
     proposal_date = Column(Date, nullable=False)
     response_date = Column(Date)
+    due_date = Column(Date, nullable=True)  # Optional due date for response
 
     # Status
     status = Column(
@@ -91,11 +92,18 @@ class TNMTicket(Base):
     last_email_sent_at = Column(DateTime(timezone=True))
     reminder_count = Column(Integer, default=0)
     last_reminder_sent_at = Column(DateTime(timezone=True))
+    send_reminders_until_accepted = Column(Boolean, default=False, nullable=False)
+    send_reminders_until_paid = Column(Boolean, default=False, nullable=False)
 
     # GC approval tracking
     approval_token = Column(String(255), unique=True, index=True)
     approval_token_expires_at = Column(DateTime(timezone=True))
     viewed_at = Column(DateTime(timezone=True))
+
+    # Payment tracking
+    is_paid = Column(Integer, default=0, nullable=False, index=True)  # 0 = not paid, 1 = paid
+    paid_date = Column(DateTime(timezone=True))
+    paid_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"))
 
     notes = Column(Text)
     extra_metadata = Column(JSONB, default={})

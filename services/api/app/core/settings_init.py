@@ -297,6 +297,22 @@ async def initialize_settings_from_env(db: AsyncSession) -> None:
             "description": "Introduction text for approval confirmation email"
         },
 
+        # Email Template Settings - Due Date
+        {
+            "key": "EMAIL_DUE_DATE_LABEL",
+            "value": "Response Due Date:",
+            "category": "email_templates",
+            "data_type": "string",
+            "description": "Label for due date field in emails"
+        },
+        {
+            "key": "EMAIL_SHOW_DUE_DATE",
+            "value": "true",
+            "category": "email_templates",
+            "data_type": "boolean",
+            "description": "Show due date in emails if set"
+        },
+
         # PDF Template Settings
         {
             "key": "PDF_HEADER_SHOW_COMPANY_INFO",

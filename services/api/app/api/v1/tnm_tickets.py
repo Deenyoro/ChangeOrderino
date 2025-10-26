@@ -27,6 +27,11 @@ from app.schemas.tnm_ticket import (
     SendRFCORequest,
     SendRFCOResponse,
     ManualApprovalRequest,
+    MarkAsPaidRequest,
+    BulkApprovalRequest,
+    BulkMarkAsPaidRequest,
+    BulkActionResponse,
+    BulkActionResult,
 )
 from app.services.pdf_generator import pdf_generator
 from app.services.queue_service import queue_service
@@ -818,14 +823,24 @@ async def manual_approval_override(
                 detail="approved_amount is required for partial approval"
             )
         ticket.approved_amount = approval_data.approved_amount
+    elif approval_data.status == 'sent':
+        # Undo approval - reset to sent status
+        ticket.status = TNMStatus.sent
+        ticket.approved_amount = 0
+        ticket.response_date = None
+        # Also unmark as paid if it was paid
+        if ticket.is_paid:
+            ticket.is_paid = 0
+            ticket.paid_date = None
+            ticket.paid_by = None
     else:
         raise HTTPException(
             status_code=400,
             detail=f"Invalid status: {approval_data.status}"
         )
 
-    # Update response date if not already set
-    if not ticket.response_date:
+    # Update response date if not already set (skip for 'sent' status as we're undoing)
+    if approval_data.status != 'sent' and not ticket.response_date:
         ticket.response_date = datetime.utcnow().date()
 
     # Update notes
@@ -869,3 +884,347 @@ async def manual_approval_override(
         "approved_amount": float(ticket.approved_amount),
         "response_date": ticket.response_date.isoformat() if ticket.response_date else None,
     }
+
+
+@router.patch("/{ticket_id}/mark-paid/")
+async def mark_ticket_as_paid(
+    ticket_id: UUID,
+    payment_data: MarkAsPaidRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user),
+):
+    """
+    Mark a ticket as paid or unpaid
+
+    Only approved or partially_approved tickets can be marked as paid.
+    Requires admin privileges.
+    """
+    # Fetch ticket
+    result = await db.execute(
+        select(TNMTicket).where(TNMTicket.id == ticket_id)
+    )
+    ticket = result.scalar_one_or_none()
+
+    if not ticket:
+        raise HTTPException(status_code=404, detail="TNM ticket not found")
+
+    # Check if ticket is approved
+    if ticket.status not in [TNMStatus.approved, TNMStatus.partially_approved]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Can only mark approved or partially approved tickets as paid. Current status: {ticket.status.value}"
+        )
+
+    old_paid_status = bool(ticket.is_paid)
+
+    # Update paid status
+    if payment_data.is_paid:
+        ticket.is_paid = 1
+        if not ticket.paid_date:  # Only set date if not already set
+            ticket.paid_date = datetime.utcnow()
+        if not ticket.paid_by:  # Only set user if not already set
+            ticket.paid_by = UUID(current_user.sub)
+    else:
+        # Mark as unpaid
+        ticket.is_paid = 0
+        ticket.paid_date = None
+        ticket.paid_by = None
+
+    # Update notes if provided
+    if payment_data.notes:
+        paid_status_str = "PAID" if payment_data.is_paid else "UNPAID"
+        note_entry = f"[{paid_status_str} by {current_user.email} on {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}]: {payment_data.notes}"
+        if ticket.notes:
+            ticket.notes += f"\n\n{note_entry}"
+        else:
+            ticket.notes = note_entry
+
+    # Log payment status change
+    await audit_service.log(
+        db=db,
+        entity_type='tnm_ticket',
+        entity_id=ticket_id,
+        action='mark_as_paid' if payment_data.is_paid else 'mark_as_unpaid',
+        user_id=UUID(current_user.sub),
+        changes={
+            'is_paid': {'old': old_paid_status, 'new': payment_data.is_paid},
+            'paid_date': {
+                'old': ticket.paid_date.isoformat() if old_paid_status and ticket.paid_date else None,
+                'new': datetime.utcnow().isoformat() if payment_data.is_paid else None
+            },
+            'notes': payment_data.notes or '',
+        },
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get('user-agent'),
+    )
+
+    await db.commit()
+    await db.refresh(ticket)
+
+    logger.info(
+        f"Payment status updated for ticket {ticket.tnm_number}: "
+        f"{'Unpaid' if old_paid_status else 'Paid'} → {'Paid' if payment_data.is_paid else 'Unpaid'} by {current_user.email}"
+    )
+
+    return {
+        "success": True,
+        "ticket_id": str(ticket_id),
+        "tnm_number": ticket.tnm_number,
+        "is_paid": bool(ticket.is_paid),
+        "paid_date": ticket.paid_date.isoformat() if ticket.paid_date else None,
+        "paid_by": str(ticket.paid_by) if ticket.paid_by else None,
+    }
+
+
+# ============ BULK ACTION ENDPOINTS ============
+
+@router.post("/bulk/approve/", response_model=BulkActionResponse)
+async def bulk_approve_tickets(
+    bulk_data: BulkApprovalRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user),
+):
+    """
+    Bulk approve multiple tickets
+
+    Allows admin to approve/deny multiple tickets at once.
+    Each ticket is processed independently - failures don't stop other tickets.
+    """
+    results = []
+    successful = 0
+    failed = 0
+
+    for ticket_id in bulk_data.ticket_ids:
+        try:
+            # Fetch ticket
+            result = await db.execute(
+                select(TNMTicket).where(TNMTicket.id == ticket_id)
+            )
+            ticket = result.scalar_one_or_none()
+
+            if not ticket:
+                results.append(BulkActionResult(
+                    ticket_id=str(ticket_id),
+                    tnm_number="Unknown",
+                    success=False,
+                    error="Ticket not found"
+                ))
+                failed += 1
+                continue
+
+            # Store old status
+            old_status = ticket.status
+
+            # Update status
+            if bulk_data.status == 'approved':
+                ticket.status = TNMStatus.approved
+                ticket.approved_amount = bulk_data.approved_amount or ticket.proposal_amount
+            elif bulk_data.status == 'denied':
+                ticket.status = TNMStatus.denied
+                ticket.approved_amount = 0
+            elif bulk_data.status == 'partially_approved':
+                ticket.status = TNMStatus.partially_approved
+                if bulk_data.approved_amount is None:
+                    results.append(BulkActionResult(
+                        ticket_id=str(ticket_id),
+                        tnm_number=ticket.tnm_number,
+                        success=False,
+                        error="approved_amount is required for partial approval"
+                    ))
+                    failed += 1
+                    continue
+                ticket.approved_amount = bulk_data.approved_amount
+            elif bulk_data.status == 'sent':
+                # Undo approval - reset to sent status
+                ticket.status = TNMStatus.sent
+                ticket.approved_amount = 0
+                ticket.response_date = None
+                # Also unmark as paid if it was paid
+                if ticket.is_paid:
+                    ticket.is_paid = 0
+                    ticket.paid_date = None
+                    ticket.paid_by = None
+
+            # Update response date if not already set (skip for 'sent' status as we're undoing)
+            if bulk_data.status != 'sent' and not ticket.response_date:
+                ticket.response_date = datetime.utcnow().date()
+
+            # Update notes
+            if bulk_data.notes:
+                note_text = f"[Bulk Override by {current_user.email}]: {bulk_data.notes}"
+                if ticket.notes:
+                    ticket.notes += f"\n\n{note_text}"
+                else:
+                    ticket.notes = note_text
+
+            # Log bulk approval
+            await audit_service.log(
+                db=db,
+                entity_type='tnm_ticket',
+                entity_id=ticket_id,
+                action='bulk_approval_override',
+                user_id=UUID(current_user.sub),
+                changes={
+                    'status': {'old': old_status.value, 'new': ticket.status.value},
+                    'approved_amount': {'old': '0', 'new': str(ticket.approved_amount)},
+                    'override_reason': bulk_data.reason or 'Bulk approval - no reason provided',
+                    'notes': bulk_data.notes or '',
+                },
+                ip_address=request.client.host if request.client else None,
+                user_agent=request.headers.get('user-agent'),
+            )
+
+            results.append(BulkActionResult(
+                ticket_id=str(ticket_id),
+                tnm_number=ticket.tnm_number,
+                success=True
+            ))
+            successful += 1
+
+            logger.info(
+                f"Bulk approval for ticket {ticket.tnm_number}: "
+                f"{old_status.value} → {ticket.status.value} by {current_user.email}"
+            )
+
+        except Exception as e:
+            logger.error(f"Error bulk approving ticket {ticket_id}: {str(e)}", exc_info=True)
+            results.append(BulkActionResult(
+                ticket_id=str(ticket_id),
+                tnm_number="Unknown",
+                success=False,
+                error=str(e)
+            ))
+            failed += 1
+
+    # Commit all changes
+    await db.commit()
+
+    return BulkActionResponse(
+        total=len(bulk_data.ticket_ids),
+        successful=successful,
+        failed=failed,
+        results=results
+    )
+
+
+@router.post("/bulk/mark-paid/", response_model=BulkActionResponse)
+async def bulk_mark_tickets_as_paid(
+    bulk_data: BulkMarkAsPaidRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user),
+):
+    """
+    Bulk mark multiple tickets as paid or unpaid
+
+    Only approved or partially_approved tickets can be marked as paid.
+    Each ticket is processed independently - failures don't stop other tickets.
+    """
+    results = []
+    successful = 0
+    failed = 0
+
+    for ticket_id in bulk_data.ticket_ids:
+        try:
+            # Fetch ticket
+            result = await db.execute(
+                select(TNMTicket).where(TNMTicket.id == ticket_id)
+            )
+            ticket = result.scalar_one_or_none()
+
+            if not ticket:
+                results.append(BulkActionResult(
+                    ticket_id=str(ticket_id),
+                    tnm_number="Unknown",
+                    success=False,
+                    error="Ticket not found"
+                ))
+                failed += 1
+                continue
+
+            # Check if ticket is approved
+            if ticket.status not in [TNMStatus.approved, TNMStatus.partially_approved]:
+                results.append(BulkActionResult(
+                    ticket_id=str(ticket_id),
+                    tnm_number=ticket.tnm_number,
+                    success=False,
+                    error=f"Can only mark approved or partially approved tickets as paid. Current status: {ticket.status.value}"
+                ))
+                failed += 1
+                continue
+
+            old_paid_status = bool(ticket.is_paid)
+
+            # Update paid status
+            if bulk_data.is_paid:
+                ticket.is_paid = 1
+                if not ticket.paid_date:
+                    ticket.paid_date = datetime.utcnow()
+                if not ticket.paid_by:
+                    ticket.paid_by = UUID(current_user.sub)
+            else:
+                ticket.is_paid = 0
+                ticket.paid_date = None
+                ticket.paid_by = None
+
+            # Update notes if provided
+            if bulk_data.notes:
+                paid_status_str = "PAID" if bulk_data.is_paid else "UNPAID"
+                note_entry = f"[Bulk {paid_status_str} by {current_user.email} on {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}]: {bulk_data.notes}"
+                if ticket.notes:
+                    ticket.notes += f"\n\n{note_entry}"
+                else:
+                    ticket.notes = note_entry
+
+            # Log bulk payment status change
+            await audit_service.log(
+                db=db,
+                entity_type='tnm_ticket',
+                entity_id=ticket_id,
+                action='bulk_mark_as_paid' if bulk_data.is_paid else 'bulk_mark_as_unpaid',
+                user_id=UUID(current_user.sub),
+                changes={
+                    'is_paid': {'old': old_paid_status, 'new': bulk_data.is_paid},
+                    'paid_date': {
+                        'old': ticket.paid_date.isoformat() if old_paid_status and ticket.paid_date else None,
+                        'new': datetime.utcnow().isoformat() if bulk_data.is_paid else None
+                    },
+                    'notes': bulk_data.notes or '',
+                },
+                ip_address=request.client.host if request.client else None,
+                user_agent=request.headers.get('user-agent'),
+            )
+
+            results.append(BulkActionResult(
+                ticket_id=str(ticket_id),
+                tnm_number=ticket.tnm_number,
+                success=True
+            ))
+            successful += 1
+
+            logger.info(
+                f"Bulk payment status update for ticket {ticket.tnm_number}: "
+                f"{'Unpaid' if old_paid_status else 'Paid'} → {'Paid' if bulk_data.is_paid else 'Unpaid'} by {current_user.email}"
+            )
+
+        except Exception as e:
+            logger.error(f"Error bulk marking ticket {ticket_id} as paid: {str(e)}", exc_info=True)
+            results.append(BulkActionResult(
+                ticket_id=str(ticket_id),
+                tnm_number="Unknown",
+                success=False,
+                error=str(e)
+            ))
+            failed += 1
+
+    # Commit all changes
+    await db.commit()
+
+    return BulkActionResponse(
+        total=len(bulk_data.ticket_ids),
+        successful=successful,
+        failed=failed,
+        results=results
+    )

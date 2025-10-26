@@ -79,13 +79,67 @@ export const tnmTicketsApi = {
   manualApprovalOverride: async (
     id: string,
     data: {
-      status: 'approved' | 'denied' | 'partially_approved';
+      status: 'approved' | 'denied' | 'partially_approved' | 'sent';
       approved_amount?: number;
       reason?: string;
       notes?: string;
     }
   ) => {
     const response = await apiClient.patch<any>(`v1/tnm-tickets/${id}/manual-approval/`, data);
+    return response.data;
+  },
+
+  // Mark as paid
+  markAsPaid: async (
+    id: string,
+    data: {
+      is_paid: boolean;
+      notes?: string;
+    }
+  ) => {
+    const response = await apiClient.patch<any>(`v1/tnm-tickets/${id}/mark-paid/`, data);
+    return response.data;
+  },
+
+  // Bulk approve
+  bulkApprove: async (data: {
+    ticket_ids: string[];
+    status: 'approved' | 'denied' | 'partially_approved' | 'sent';
+    approved_amount?: number;
+    reason?: string;
+    notes?: string;
+  }) => {
+    const response = await apiClient.post<{
+      total: number;
+      successful: number;
+      failed: number;
+      results: Array<{
+        ticket_id: string;
+        tnm_number: string;
+        success: boolean;
+        error?: string;
+      }>;
+    }>('v1/tnm-tickets/bulk/approve/', data);
+    return response.data;
+  },
+
+  // Bulk mark as paid
+  bulkMarkAsPaid: async (data: {
+    ticket_ids: string[];
+    is_paid: boolean;
+    notes?: string;
+  }) => {
+    const response = await apiClient.post<{
+      total: number;
+      successful: number;
+      failed: number;
+      results: Array<{
+        ticket_id: string;
+        tnm_number: string;
+        success: boolean;
+        error?: string;
+      }>;
+    }>('v1/tnm-tickets/bulk/mark-paid/', data);
     return response.data;
   },
 };

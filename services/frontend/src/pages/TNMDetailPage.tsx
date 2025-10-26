@@ -39,6 +39,8 @@ export const TNMDetailPage: React.FC = () => {
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
   const [isManualApprovalModalOpen, setIsManualApprovalModalOpen] = useState(false);
   const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
+  const [isMarkPaidModalOpen, setIsMarkPaidModalOpen] = useState(false);
+  const [paidNotes, setPaidNotes] = useState('');
   const [gcEmail, setGcEmail] = useState('');
   const [customOHP, setCustomOHP] = useState({
     labor: 0,
@@ -47,7 +49,7 @@ export const TNMDetailPage: React.FC = () => {
     subcontractor: 0,
   });
   const [manualApprovalData, setManualApprovalData] = useState({
-    status: 'approved' as 'approved' | 'denied' | 'partially_approved',
+    status: 'approved' as 'approved' | 'denied' | 'partially_approved' | 'sent',
     approved_amount: 0,
     reason: '',
     notes: '',
@@ -166,6 +168,23 @@ export const TNMDetailPage: React.FC = () => {
     }
   };
 
+  const handleMarkAsPaid = async () => {
+    try {
+      await tnmTicketsApi.markAsPaid(ticket.id, {
+        is_paid: !ticket.is_paid,
+        notes: paidNotes,
+      });
+      toast.success(ticket.is_paid ? 'Marked as unpaid' : 'Marked as paid');
+      setIsMarkPaidModalOpen(false);
+      setPaidNotes('');
+      // Refetch ticket data
+      window.location.reload();
+    } catch (error: any) {
+      console.error('Mark as paid error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to update payment status');
+    }
+  };
+
   const canEdit = ticket.status === TNMStatus.DRAFT || ticket.status === TNMStatus.PENDING_REVIEW;
   const canSend = ticket.status === TNMStatus.READY_TO_SEND || ticket.status === TNMStatus.PENDING_REVIEW;
   const canRemind = ticket.status === TNMStatus.SENT || ticket.status === TNMStatus.VIEWED;
@@ -259,6 +278,32 @@ export const TNMDetailPage: React.FC = () => {
               Manual Override
             </Button>
           )}
+          {(ticket.status === TNMStatus.APPROVED || ticket.status === TNMStatus.PARTIALLY_APPROVED) && (
+            <>
+              <Button
+                variant={ticket.is_paid ? "secondary" : "primary"}
+                onClick={() => setIsMarkPaidModalOpen(true)}
+              >
+                {ticket.is_paid ? <XCircle className="w-4 h-4 mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+                {ticket.is_paid ? 'Mark as Unpaid' : 'Mark as Paid'}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setManualApprovalData({
+                    status: 'sent',
+                    approved_amount: 0,
+                    reason: '',
+                    notes: '',
+                  });
+                  setIsManualApprovalModalOpen(true);
+                }}
+              >
+                <XCircle className="w-4 h-4 mr-2" />
+                Undo Approval
+              </Button>
+            </>
+          )}
           <Button variant="secondary" onClick={handleDownloadPDF} isLoading={isDownloadingPDF}>
             <FileDown className="w-4 h-4 mr-2" />
             Download PDF
@@ -290,6 +335,12 @@ export const TNMDetailPage: React.FC = () => {
               <dt className="text-gray-600">Proposal Date</dt>
               <dd className="font-medium text-gray-900">{formatDate(ticket.proposal_date)}</dd>
             </div>
+            {ticket.due_date && (
+              <div>
+                <dt className="text-gray-600">Due Date</dt>
+                <dd className="font-medium text-red-600 font-semibold">{formatDate(ticket.due_date)}</dd>
+              </div>
+            )}
             {ticket.response_date && (
               <div>
                 <dt className="text-gray-600">Response Date</dt>
@@ -370,6 +421,29 @@ export const TNMDetailPage: React.FC = () => {
               <div>
                 <dt className="text-gray-600">GC Viewed At</dt>
                 <dd className="font-medium text-gray-900">{formatDateTime(ticket.viewed_at)}</dd>
+              </div>
+            )}
+            {(ticket.send_reminders_until_accepted || ticket.send_reminders_until_paid) && (
+              <div className="pt-3 mt-3 border-t border-gray-200">
+                <dt className="text-gray-600 mb-2">Automatic Reminders</dt>
+                <dd className="space-y-2">
+                  {ticket.send_reminders_until_accepted && (
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        Until Accepted
+                      </span>
+                      <span className="text-xs text-gray-600">Reminders continue until GC approves</span>
+                    </div>
+                  )}
+                  {ticket.send_reminders_until_paid && (
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        Until Paid
+                      </span>
+                      <span className="text-xs text-gray-600">Reminders continue until marked as paid</span>
+                    </div>
+                  )}
+                </dd>
               </div>
             )}
           </dl>
@@ -545,34 +619,56 @@ export const TNMDetailPage: React.FC = () => {
       <Modal
         isOpen={isManualApprovalModalOpen}
         onClose={() => setIsManualApprovalModalOpen(false)}
-        title="Manual Approval Override"
+        title={manualApprovalData.status === 'sent' ? 'Undo Approval' : 'Manual Approval Override'}
         footer={
           <>
             <Button variant="secondary" onClick={() => setIsManualApprovalModalOpen(false)}>
               Cancel
             </Button>
             <Button onClick={handleManualApproval} isLoading={manualApprovalMutation.isPending}>
-              Submit Override
+              {manualApprovalData.status === 'sent' ? 'Confirm Undo' : 'Submit Override'}
             </Button>
           </>
         }
       >
         <div className="space-y-5">
           {/* Enhanced intro with icon */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex gap-3">
-            <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+          <div className={`border rounded-lg p-4 flex gap-3 ${
+            manualApprovalData.status === 'sent'
+              ? 'bg-yellow-50 border-yellow-200'
+              : 'bg-blue-50 border-blue-200'
+          }`}>
+            <AlertCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
+              manualApprovalData.status === 'sent'
+                ? 'text-yellow-600'
+                : 'text-blue-600'
+            }`} />
             <div>
-              <p className="text-sm font-medium text-blue-900 mb-1">Manual Override</p>
-              <p className="text-sm text-blue-700">
-                Record offline approvals from phone calls, emails, or in-person meetings.
+              <p className={`text-sm font-medium mb-1 ${
+                manualApprovalData.status === 'sent'
+                  ? 'text-yellow-900'
+                  : 'text-blue-900'
+              }`}>
+                {manualApprovalData.status === 'sent' ? 'Undo Approval' : 'Manual Override'}
+              </p>
+              <p className={`text-sm ${
+                manualApprovalData.status === 'sent'
+                  ? 'text-yellow-700'
+                  : 'text-blue-700'
+              }`}>
+                {manualApprovalData.status === 'sent'
+                  ? 'This will reset the ticket back to "Sent" status, clearing approval and payment information. Use this to correct mistakes or re-submit for approval.'
+                  : 'Record offline approvals from phone calls, emails, or in-person meetings.'
+                }
               </p>
             </div>
           </div>
 
           {/* Enhanced status selection with visual cards */}
-          <div>
-            <label className="label mb-3">Approval Status *</label>
-            <div className="grid grid-cols-1 gap-2">
+          {manualApprovalData.status !== 'sent' && (
+            <div>
+              <label className="label mb-3">Approval Status *</label>
+              <div className="grid grid-cols-1 gap-2">
               {/* Approved Option */}
               <button
                 type="button"
@@ -646,9 +742,10 @@ export const TNMDetailPage: React.FC = () => {
               </button>
             </div>
           </div>
+          )}
 
           {/* Approved Amount (only for approved/partial) */}
-          {manualApprovalData.status !== 'denied' && (
+          {manualApprovalData.status !== 'denied' && manualApprovalData.status !== 'sent' && (
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
               <Input
                 label="Approved Amount"
@@ -676,13 +773,13 @@ export const TNMDetailPage: React.FC = () => {
           )}
 
           <Input
-            label="Reason for Override"
+            label={manualApprovalData.status === 'sent' ? 'Reason for Undoing' : 'Reason for Override'}
             value={manualApprovalData.reason}
             onChange={(e) =>
               setManualApprovalData({ ...manualApprovalData, reason: e.target.value })
             }
-            placeholder="e.g., Approved via phone call"
-            helperText="Brief explanation of why this is being manually overridden"
+            placeholder={manualApprovalData.status === 'sent' ? 'e.g., Incorrect approval, need to resubmit' : 'e.g., Approved via phone call'}
+            helperText={manualApprovalData.status === 'sent' ? 'Brief explanation of why this approval is being undone' : 'Brief explanation of why this is being manually overridden'}
           />
 
           <div>
@@ -704,7 +801,7 @@ export const TNMDetailPage: React.FC = () => {
               <div>
                 <p className="text-sm font-semibold text-yellow-900 mb-1">Audit Trail</p>
                 <p className="text-sm text-yellow-800">
-                  This override will be permanently logged with your email, timestamp, and reason.
+                  This {manualApprovalData.status === 'sent' ? 'action' : 'override'} will be permanently logged with your email, timestamp, and reason.
                 </p>
               </div>
             </div>
@@ -719,19 +816,23 @@ export const TNMDetailPage: React.FC = () => {
                 <span className={`font-semibold ${
                   manualApprovalData.status === 'approved' ? 'text-green-600' :
                   manualApprovalData.status === 'denied' ? 'text-red-600' :
+                  manualApprovalData.status === 'sent' ? 'text-blue-600' :
                   'text-yellow-600'
                 }`}>
                   {manualApprovalData.status === 'approved' && 'APPROVED'}
                   {manualApprovalData.status === 'denied' && 'DENIED'}
                   {manualApprovalData.status === 'partially_approved' && 'PARTIALLY APPROVED'}
+                  {manualApprovalData.status === 'sent' && 'SENT (Reset)'}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Approved Amount:</span>
-                <span className="font-semibold text-gray-900">
-                  {formatCurrency(manualApprovalData.approved_amount)}
-                </span>
-              </div>
+              {manualApprovalData.status !== 'sent' && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Approved Amount:</span>
+                  <span className="font-semibold text-gray-900">
+                    {formatCurrency(manualApprovalData.approved_amount)}
+                  </span>
+                </div>
+              )}
               {manualApprovalData.reason && (
                 <div className="pt-2 border-t border-gray-200">
                   <span className="text-gray-600">Reason: </span>
@@ -744,6 +845,54 @@ export const TNMDetailPage: React.FC = () => {
       </Modal>
 
       {/* Delete Confirmation */}
+      <Modal
+        isOpen={isMarkPaidModalOpen}
+        onClose={() => {
+          setIsMarkPaidModalOpen(false);
+          setPaidNotes('');
+        }}
+        title={ticket.is_paid ? 'Mark as Unpaid' : 'Mark as Paid'}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsMarkPaidModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant={ticket.is_paid ? "danger" : "primary"}
+              onClick={handleMarkAsPaid}
+            >
+              {ticket.is_paid ? 'Mark as Unpaid' : 'Mark as Paid'}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-gray-700">
+            {ticket.is_paid
+              ? 'Are you sure you want to mark this ticket as unpaid? This will remove the payment tracking information.'
+              : `Mark ticket ${ticket.tnm_number} as paid for ${formatCurrency(ticket.approved_amount)}?`
+            }
+          </p>
+
+          <div>
+            <label className="label">Notes (optional)</label>
+            <textarea
+              className="input-field min-h-[80px]"
+              value={paidNotes}
+              onChange={(e) => setPaidNotes(e.target.value)}
+              placeholder="e.g., Check #12345, Wire transfer confirmation..."
+            />
+          </div>
+
+          {ticket.paid_date && ticket.is_paid && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm">
+              <div className="text-gray-600">Currently marked as paid on:</div>
+              <div className="font-semibold text-gray-900">{formatDateTime(ticket.paid_date)}</div>
+            </div>
+          )}
+        </div>
+      </Modal>
+
       <Modal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}

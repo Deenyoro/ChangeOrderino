@@ -37,6 +37,12 @@
             <span class="info-label">Date:</span>
             <span class="info-value">{{ proposal_date }}</span>
         </div>
+        {% if due_date and show_due_date %}
+        <div class="info-row">
+            <span class="info-label">{{ due_date_label }}</span>
+            <span class="info-value" style="font-weight: 600; color: #dc2626;">{{ due_date }}</span>
+        </div>
+        {% endif %}
     </div>
 
     <div class="info-box">

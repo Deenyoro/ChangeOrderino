@@ -3,7 +3,7 @@ from typing import Optional, List
 from uuid import UUID
 from datetime import datetime, date
 from decimal import Decimal
-from pydantic import BaseModel, Field, EmailStr, ConfigDict
+from pydantic import BaseModel, Field, EmailStr, ConfigDict, field_validator
 
 
 # ============ LINE ITEM SCHEMAS ============
@@ -112,6 +112,19 @@ class TNMTicketBase(BaseModel):
     submitter_name: str
     submitter_email: EmailStr
     proposal_date: date
+    due_date: Optional[date] = None
+    send_reminders_until_accepted: bool = False
+    send_reminders_until_paid: bool = False
+
+    @field_validator('due_date')
+    @classmethod
+    def validate_due_date(cls, v: Optional[date], info) -> Optional[date]:
+        """Validate that due_date is not before proposal_date"""
+        if v is not None and 'proposal_date' in info.data:
+            proposal_date = info.data['proposal_date']
+            if v < proposal_date:
+                raise ValueError('Due date cannot be before proposal date')
+        return v
 
 
 class TNMTicketCreate(TNMTicketBase):
@@ -142,6 +155,9 @@ class TNMTicketUpdate(BaseModel):
     rate_laborer: Optional[Decimal] = Field(None, ge=0)
 
     response_date: Optional[date] = None
+    due_date: Optional[date] = None
+    send_reminders_until_accepted: Optional[bool] = None
+    send_reminders_until_paid: Optional[bool] = None
     notes: Optional[str] = None
 
 
@@ -191,6 +207,14 @@ class TNMTicketResponse(TNMTicketBase):
     email_sent_count: int
     reminder_count: int
     viewed_at: Optional[datetime]
+    send_reminders_until_accepted: bool
+    send_reminders_until_paid: bool
+
+    # Payment tracking
+    is_paid: int = 0
+    paid_date: Optional[datetime] = None
+    paid_by: Optional[UUID] = None
+
     created_at: datetime
     updated_at: datetime
 
@@ -222,7 +246,47 @@ class SendRFCOResponse(BaseModel):
 
 class ManualApprovalRequest(BaseModel):
     """Request schema for manual approval override"""
-    status: str = Field(..., pattern='^(approved|denied|partially_approved)$')
+    status: str = Field(..., pattern='^(approved|denied|partially_approved|sent)$')
     approved_amount: Optional[Decimal] = Field(None, ge=0)
     reason: Optional[str] = Field(None, max_length=500)
     notes: Optional[str] = None
+
+
+class MarkAsPaidRequest(BaseModel):
+    """Request schema for marking ticket as paid"""
+    is_paid: bool = True
+    notes: Optional[str] = None
+
+
+# ============ BULK ACTION SCHEMAS ============
+
+class BulkApprovalRequest(BaseModel):
+    """Request schema for bulk manual approval"""
+    ticket_ids: List[UUID] = Field(..., min_length=1)
+    status: str = Field(..., pattern='^(approved|denied|partially_approved|sent)$')
+    approved_amount: Optional[Decimal] = Field(None, ge=0)
+    reason: Optional[str] = Field(None, max_length=500)
+    notes: Optional[str] = None
+
+
+class BulkMarkAsPaidRequest(BaseModel):
+    """Request schema for bulk marking tickets as paid"""
+    ticket_ids: List[UUID] = Field(..., min_length=1)
+    is_paid: bool = True
+    notes: Optional[str] = None
+
+
+class BulkActionResult(BaseModel):
+    """Result for a single ticket in a bulk action"""
+    ticket_id: str
+    tnm_number: str
+    success: bool
+    error: Optional[str] = None
+
+
+class BulkActionResponse(BaseModel):
+    """Response schema for bulk actions"""
+    total: int
+    successful: int
+    failed: int
+    results: List[BulkActionResult]

@@ -197,6 +197,12 @@
                     <span class="info-label">Date:</span>
                     <span class="info-value">{{ tnm_ticket.proposal_date | date }}</span>
                 </div>
+                {% if tnm_ticket.due_date and pdf_show_due_date %}
+                <div class="info-item">
+                    <span class="info-label" style="color: #dc2626; font-weight: 600;">{{ pdf_due_date_label }}</span>
+                    <span class="info-value" style="color: #dc2626; font-weight: 600;">{{ tnm_ticket.due_date | date }}</span>
+                </div>
+                {% endif %}
                 <div class="info-item">
                     <span class="info-label">Submitted By:</span>
                     <span class="info-value">{{ tnm_ticket.submitter_name }}</span>

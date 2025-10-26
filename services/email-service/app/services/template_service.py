@@ -113,6 +113,10 @@ class TemplateService:
                 'email_intro': settings.get('intro', 'Please review the following Request for Change Order (RFCO) for your approval.'),
                 'email_button_text': settings.get('button_text', 'Review & Approve RFCO'),
                 'email_footer_text': footer_text,
+                # Due date (conditional)
+                'due_date': self._format_date(tnm_ticket.get('due_date')) if tnm_ticket.get('due_date') else None,
+                'show_due_date': settings.get('show_due_date', 'true').lower() == 'true',
+                'due_date_label': settings.get('due_date_label', 'Response Due Date:'),
             }
 
             template = self.env.get_template('rfco_send.html')
@@ -186,6 +190,10 @@ class TemplateService:
                 'email_intro': settings.get('intro', 'This is a friendly reminder that the following Request for Change Order (RFCO) is still pending your review and approval.'),
                 'email_button_text': settings.get('button_text', 'Review & Approve RFCO'),
                 'email_footer_text': settings.get('footer_text', 'If you need additional details or have questions about this change order, please contact us immediately.'),
+                # Due date (conditional)
+                'due_date': self._format_date(tnm_ticket.get('due_date')) if tnm_ticket.get('due_date') else None,
+                'show_due_date': settings.get('show_due_date', 'true').lower() == 'true',
+                'due_date_label': settings.get('due_date_label', 'Response Due Date:'),
             }
 
             template = self.env.get_template('reminder.html')

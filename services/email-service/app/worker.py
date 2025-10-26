@@ -84,8 +84,14 @@ async def get_email_template_settings(session: AsyncSession, email_type: str) ->
     Returns:
         Dictionary of template settings
     """
+    # Common settings for all email types
+    common_settings = {
+        'show_due_date': await get_setting_value(session, 'EMAIL_SHOW_DUE_DATE', 'true'),
+        'due_date_label': await get_setting_value(session, 'EMAIL_DUE_DATE_LABEL', 'Response Due Date:'),
+    }
+
     if email_type == 'rfco':
-        return {
+        settings = {
             'subject': await get_setting_value(session, 'EMAIL_RFCO_SUBJECT', 'RFCO {tnm_number} - {project_name}'),
             'greeting': await get_setting_value(session, 'EMAIL_RFCO_GREETING', 'Dear General Contractor,'),
             'intro': await get_setting_value(session, 'EMAIL_RFCO_INTRO',
@@ -94,8 +100,10 @@ async def get_email_template_settings(session: AsyncSession, email_type: str) ->
             'footer_text': await get_setting_value(session, 'EMAIL_RFCO_FOOTER_TEXT',
                 'If you have any questions about this change order, please contact us at {company_email} or {company_phone}.'),
         }
+        settings.update(common_settings)
+        return settings
     elif email_type == 'reminder':
-        return {
+        settings = {
             'subject': await get_setting_value(session, 'EMAIL_REMINDER_SUBJECT',
                 'REMINDER #{reminder_number}: RFCO {tnm_number} - {project_name}'),
             'greeting': await get_setting_value(session, 'EMAIL_REMINDER_GREETING', 'Dear General Contractor,'),
@@ -105,6 +113,8 @@ async def get_email_template_settings(session: AsyncSession, email_type: str) ->
             'footer_text': await get_setting_value(session, 'EMAIL_REMINDER_FOOTER_TEXT',
                 'If you need additional details or have questions about this change order, please contact us immediately.'),
         }
+        settings.update(common_settings)
+        return settings
     elif email_type == 'approval':
         return {
             'subject': await get_setting_value(session, 'EMAIL_APPROVAL_SUBJECT',
@@ -426,11 +436,35 @@ async def _send_reminder_email_async(
 
             ticket, project = data
 
-            # Check if ticket is still pending (don't send reminder if already approved/denied)
-            if ticket.status not in [TNMStatus.sent, TNMStatus.viewed]:
+            # Determine if we should send reminder based on flags and status
+            should_send = False
+            stop_reason = None
+
+            # If send_reminders_until_paid is enabled
+            if ticket.send_reminders_until_paid:
+                if ticket.paid_date is not None:
+                    stop_reason = "ticket is paid"
+                else:
+                    should_send = True
+            # If send_reminders_until_accepted is enabled (but not until paid)
+            elif ticket.send_reminders_until_accepted:
+                if ticket.status in [TNMStatus.approved, TNMStatus.partially_approved]:
+                    stop_reason = "ticket is accepted"
+                elif ticket.status in [TNMStatus.denied, TNMStatus.cancelled]:
+                    stop_reason = f"ticket is {ticket.status.value}"
+                else:
+                    should_send = True
+            # Default behavior: only send if still pending (sent/viewed status)
+            else:
+                if ticket.status in [TNMStatus.sent, TNMStatus.viewed]:
+                    should_send = True
+                else:
+                    stop_reason = f"ticket status is {ticket.status.value} (already resolved)"
+
+            # If we shouldn't send, log and return
+            if not should_send:
                 logger.info(
-                    f"Ticket {tnm_ticket_id} status is {ticket.status.value}, "
-                    f"skipping reminder (already resolved)"
+                    f"Skipping reminder #{reminder_number} for ticket {tnm_ticket_id}: {stop_reason}"
                 )
                 return True
 
@@ -485,8 +519,18 @@ async def _send_reminder_email_async(
                 # Update ticket tracking
                 await update_ticket_email_tracking(session, tnm_ticket_id, is_reminder=True)
 
-                # Schedule next reminder if not at max
-                if reminder_number < config.REMINDER_MAX_RETRIES:
+                # Schedule next reminder if not at max (or if auto-reminders are enabled)
+                should_schedule_next = False
+
+                # If auto-reminder flags are set, ignore max retries limit
+                if ticket.send_reminders_until_accepted or ticket.send_reminders_until_paid:
+                    should_schedule_next = True
+                    logger.info(f"Auto-reminders enabled for ticket {tnm_ticket_id}, scheduling next reminder")
+                # Otherwise, respect max retries limit
+                elif reminder_number < config.REMINDER_MAX_RETRIES:
+                    should_schedule_next = True
+
+                if should_schedule_next:
                     reminder_scheduler.schedule_reminder(
                         tnm_ticket_id=tnm_ticket_id,
                         to_email=to_email,
@@ -494,6 +538,8 @@ async def _send_reminder_email_async(
                         reminder_number=reminder_number + 1
                     )
                     logger.info(f"Scheduled reminder #{reminder_number + 1} for ticket {tnm_ticket_id}")
+                else:
+                    logger.info(f"Max reminders ({config.REMINDER_MAX_RETRIES}) reached for ticket {tnm_ticket_id}")
 
                 logger.info(f"✓ Successfully sent reminder #{reminder_number} for ticket {tnm_ticket_id}")
                 return True

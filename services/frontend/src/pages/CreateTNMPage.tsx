@@ -86,6 +86,11 @@ export const CreateTNMPage: React.FC = () => {
       setValue('submitter_name', existingTicket.submitter_name);
       setValue('submitter_email', existingTicket.submitter_email);
       setValue('proposal_date', formatDateForInput(new Date(existingTicket.proposal_date)));
+      if (existingTicket.due_date) {
+        setValue('due_date', formatDateForInput(new Date(existingTicket.due_date)));
+      }
+      setValue('send_reminders_until_accepted', existingTicket.send_reminders_until_accepted);
+      setValue('send_reminders_until_paid', existingTicket.send_reminders_until_paid);
 
       setSelectedProject(existingTicket.project_id);
       setLaborItems(existingTicket.labor_items || []);
@@ -141,6 +146,9 @@ export const CreateTNMPage: React.FC = () => {
         submitter_name: data.submitter_name!,
         submitter_email: data.submitter_email!,
         proposal_date: data.proposal_date!,
+        due_date: data.due_date || undefined,
+        send_reminders_until_accepted: data.send_reminders_until_accepted || false,
+        send_reminders_until_paid: data.send_reminders_until_paid || false,
         labor_items: laborItems,
         material_items: materialItems,
         equipment_items: equipmentItems,
@@ -255,6 +263,41 @@ export const CreateTNMPage: React.FC = () => {
               error={errors.proposal_date?.message}
               required
             />
+            <Input
+              label="Due Date (Optional)"
+              type="date"
+              {...register('due_date')}
+              error={errors.due_date?.message}
+              helperText="Set a deadline for GC response. Overdue tickets appear on dashboard with alerts."
+            />
+            <div className="md:col-span-2 space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <h4 className="font-medium text-gray-900">Automatic Reminder Settings</h4>
+              <p className="text-sm text-gray-600">Enable automatic reminders to keep sending until specific conditions are met</p>
+              <div className="flex items-start space-x-2">
+                <input
+                  type="checkbox"
+                  id="send_reminders_until_accepted"
+                  {...register('send_reminders_until_accepted')}
+                  className="mt-1 h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                />
+                <label htmlFor="send_reminders_until_accepted" className="text-sm">
+                  <span className="font-medium text-gray-900">Send reminders until Accepted</span>
+                  <span className="block text-gray-600">Continue sending reminders until the GC approves this ticket (ignores max reminder limit)</span>
+                </label>
+              </div>
+              <div className="flex items-start space-x-2">
+                <input
+                  type="checkbox"
+                  id="send_reminders_until_paid"
+                  {...register('send_reminders_until_paid')}
+                  className="mt-1 h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                />
+                <label htmlFor="send_reminders_until_paid" className="text-sm">
+                  <span className="font-medium text-gray-900">Send reminders until Paid</span>
+                  <span className="block text-gray-600">Continue sending reminders until this ticket is marked as paid (ignores max reminder limit)</span>
+                </label>
+              </div>
+            </div>
             <Input
               label="Submitter Name"
               {...register('submitter_name', { required: 'Name is required' })}

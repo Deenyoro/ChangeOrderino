@@ -81,6 +81,7 @@ class TNMTicket(Base):
     # Dates
     proposal_date = Column(Date, nullable=False)
     response_date = Column(Date)
+    due_date = Column(Date, nullable=True)
 
     # Status
     status = Column(SQLEnum(TNMStatus), nullable=False, default=TNMStatus.draft, index=True)
@@ -114,11 +115,18 @@ class TNMTicket(Base):
     last_email_sent_at = Column(DateTime(timezone=True))
     reminder_count = Column(Integer, default=0)
     last_reminder_sent_at = Column(DateTime(timezone=True))
+    send_reminders_until_accepted = Column(Boolean, default=False, nullable=False)
+    send_reminders_until_paid = Column(Boolean, default=False, nullable=False)
 
     # GC approval tracking
     approval_token = Column(String(255), unique=True, index=True)
     approval_token_expires_at = Column(DateTime(timezone=True))
     viewed_at = Column(DateTime(timezone=True))
+
+    # Payment tracking
+    is_paid = Column(Integer, default=0, nullable=False, index=True)
+    paid_date = Column(DateTime(timezone=True))
+    paid_by = Column(UUID(as_uuid=True))
 
     notes = Column(Text)
     extra_metadata = Column(JSONB, default={})
