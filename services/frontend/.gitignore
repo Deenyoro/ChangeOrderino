@@ -29,6 +29,6 @@ dist-ssr
 .env.test.local
 .env.production.local
 
-# License files are copied from root during build
-public/LICENSE
-public/THIRD-PARTY-LICENSES
+# License files are tracked in git and copied by Vite during build
+# public/LICENSE
+# public/THIRD-PARTY-LICENSES
