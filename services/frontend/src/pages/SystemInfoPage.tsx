@@ -39,7 +39,7 @@ const SystemInfoPage: React.FC = () => {
   const [versionCopied, setVersionCopied] = useState(false);
   const [showLicenseModal, setShowLicenseModal] = useState(false);
   const [showThirdPartyLicenseModal, setShowThirdPartyLicenseModal] = useState(false);
-  const [kawaConnectLicense, setKawaConnectLicense] = useState<string>('');
+  const [changeOrderinoLicense, setChangeOrderinoLicense] = useState<string>('');
   const [thirdPartyLicenses, setThirdPartyLicenses] = useState<string>('');
 
   // Detect enabled features
@@ -49,13 +49,13 @@ const SystemInfoPage: React.FC = () => {
   useEffect(() => {
     Promise.all([
       fetch('/LICENSE').then(r => r.text()),
-      fetch('/THIRD-PARTY-LICENSES').then(r => r.text())
+      fetch('/THIRD_PARTY_LICENSES.md').then(r => r.text())
     ]).then(([license, thirdParty]) => {
-      setKawaConnectLicense(license)
+      setChangeOrderinoLicense(license)
       setThirdPartyLicenses(thirdParty)
     }).catch(err => {
       console.error('Failed to load LICENSE files:', err)
-      setKawaConnectLicense('LICENSE file not available')
+      setChangeOrderinoLicense('LICENSE file not available')
       setThirdPartyLicenses('Third-party licenses not available')
     })
   }, [])
@@ -286,7 +286,7 @@ const SystemInfoPage: React.FC = () => {
               className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700 transition-colors"
             >
               <ScrollText className="w-4 h-4" />
-              KawaConnect License
+              ChangeOrderino License
             </button>
             <button
               onClick={() => setShowThirdPartyLicenseModal(true)}
@@ -299,12 +299,12 @@ const SystemInfoPage: React.FC = () => {
         </div>
       </div>
 
-      {/* KawaConnect License Modal */}
+      {/* ChangeOrderino License Modal */}
       {showLicenseModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">KawaConnect Software License Agreement</h2>
+              <h2 className="text-xl font-semibold text-gray-900">ChangeOrderino Software License Agreement</h2>
               <button
                 onClick={() => setShowLicenseModal(false)}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -314,7 +314,7 @@ const SystemInfoPage: React.FC = () => {
             </div>
             <div className="p-6 overflow-y-auto flex-1">
               <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono leading-relaxed">
-                {kawaConnectLicense}
+                {changeOrderinoLicense}
               </pre>
             </div>
             <div className="p-6 border-t border-gray-200">
