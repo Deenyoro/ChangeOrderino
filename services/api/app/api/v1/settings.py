@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.config import settings as app_settings
 from app.services.settings_service import settings_service
 from app.services.storage import storage_service
 from app.schemas.settings import (
@@ -197,9 +198,9 @@ async def upload_company_logo(
             folder="logos",
         )
 
-        # Generate public URL using nginx proxy
-        # Nginx proxies /storage/ to MinIO, so we use relative URL
-        logo_url = f"/storage/{storage_service.bucket_name}/{storage_key}"
+        # Generate public URL using FRONTEND_URL
+        # Use absolute URL so it works in emails
+        logo_url = f"{app_settings.FRONTEND_URL}/storage/{storage_service.bucket_name}/{storage_key}"
 
         # Update COMPANY_LOGO_URL setting in database
         setting = await settings_service.update_global_setting(

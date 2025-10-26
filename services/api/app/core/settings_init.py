@@ -206,6 +206,161 @@ async def initialize_settings_from_env(db: AsyncSession) -> None:
             "data_type": "integer",
             "description": "Hours until approval link expires"
         },
+
+        # Email Template Settings - RFCO Send Email
+        {
+            "key": "EMAIL_RFCO_SUBJECT",
+            "value": "RFCO {tnm_number} - {project_name}",
+            "category": "email_templates",
+            "data_type": "string",
+            "description": "Subject line for RFCO send email (variables: {tnm_number}, {project_name})"
+        },
+        {
+            "key": "EMAIL_RFCO_GREETING",
+            "value": "Dear General Contractor,",
+            "category": "email_templates",
+            "data_type": "string",
+            "description": "Greeting for RFCO send email"
+        },
+        {
+            "key": "EMAIL_RFCO_INTRO",
+            "value": "Please review the following Request for Change Order (RFCO) for your approval.",
+            "category": "email_templates",
+            "data_type": "string",
+            "description": "Introduction text for RFCO send email"
+        },
+        {
+            "key": "EMAIL_RFCO_BUTTON_TEXT",
+            "value": "Review & Approve RFCO",
+            "category": "email_templates",
+            "data_type": "string",
+            "description": "Button text for RFCO send email"
+        },
+        {
+            "key": "EMAIL_RFCO_FOOTER_TEXT",
+            "value": "If you have any questions about this change order, please contact us at {company_email} or {company_phone}.",
+            "category": "email_templates",
+            "data_type": "string",
+            "description": "Footer text for RFCO send email (variables: {company_email}, {company_phone})"
+        },
+
+        # Email Template Settings - Reminder Email
+        {
+            "key": "EMAIL_REMINDER_SUBJECT",
+            "value": "REMINDER #{reminder_number}: RFCO {tnm_number} - {project_name}",
+            "category": "email_templates",
+            "data_type": "string",
+            "description": "Subject line for reminder email (variables: {reminder_number}, {tnm_number}, {project_name})"
+        },
+        {
+            "key": "EMAIL_REMINDER_GREETING",
+            "value": "Dear General Contractor,",
+            "category": "email_templates",
+            "data_type": "string",
+            "description": "Greeting for reminder email"
+        },
+        {
+            "key": "EMAIL_REMINDER_INTRO",
+            "value": "This is a friendly reminder that the following Request for Change Order (RFCO) is still pending your review and approval.",
+            "category": "email_templates",
+            "data_type": "string",
+            "description": "Introduction text for reminder email"
+        },
+        {
+            "key": "EMAIL_REMINDER_BUTTON_TEXT",
+            "value": "Review & Approve RFCO",
+            "category": "email_templates",
+            "data_type": "string",
+            "description": "Button text for reminder email"
+        },
+        {
+            "key": "EMAIL_REMINDER_FOOTER_TEXT",
+            "value": "If you need additional details or have questions about this change order, please contact us immediately.",
+            "category": "email_templates",
+            "data_type": "string",
+            "description": "Footer text for reminder email"
+        },
+
+        # Email Template Settings - Approval Confirmation Email
+        {
+            "key": "EMAIL_APPROVAL_SUBJECT",
+            "value": "Change Order {status}: {tnm_number} - {project_name}",
+            "category": "email_templates",
+            "data_type": "string",
+            "description": "Subject line for approval confirmation email (variables: {status}, {tnm_number}, {project_name})"
+        },
+        {
+            "key": "EMAIL_APPROVAL_INTRO",
+            "value": "A decision has been made on the following change order.",
+            "category": "email_templates",
+            "data_type": "string",
+            "description": "Introduction text for approval confirmation email"
+        },
+
+        # PDF Template Settings
+        {
+            "key": "PDF_HEADER_SHOW_COMPANY_INFO",
+            "value": "true",
+            "category": "pdf",
+            "data_type": "boolean",
+            "description": "Show company name, email, and phone in PDF header"
+        },
+        {
+            "key": "PDF_DOCUMENT_TITLE",
+            "value": "REQUEST FOR CHANGE ORDER (RFCO)",
+            "category": "pdf",
+            "data_type": "string",
+            "description": "Main document title displayed below header"
+        },
+        {
+            "key": "PDF_PRIMARY_COLOR",
+            "value": "#1d4ed8",
+            "category": "pdf",
+            "data_type": "string",
+            "description": "Primary color for header border, section titles (hex color code)"
+        },
+        {
+            "key": "PDF_SHOW_PROJECT_INFO_SECTION",
+            "value": "true",
+            "category": "pdf",
+            "data_type": "boolean",
+            "description": "Show 'Project Information' section"
+        },
+        {
+            "key": "PDF_SHOW_NOTES_SECTION",
+            "value": "true",
+            "category": "pdf",
+            "data_type": "boolean",
+            "description": "Show 'Notes' section (if notes exist)"
+        },
+        {
+            "key": "PDF_SHOW_SIGNATURE_SECTION",
+            "value": "true",
+            "category": "pdf",
+            "data_type": "boolean",
+            "description": "Show signature section at bottom"
+        },
+        {
+            "key": "PDF_SIGNATURE_TITLE",
+            "value": "General Contractor Approval:",
+            "category": "pdf",
+            "data_type": "string",
+            "description": "Title for signature section"
+        },
+        {
+            "key": "PDF_FOOTER_TEXT",
+            "value": "This document was generated by {company_name}",
+            "category": "pdf",
+            "data_type": "string",
+            "description": "Footer text for PDF documents (variables: {company_name}, {company_email}, {company_phone})"
+        },
+        {
+            "key": "PDF_SHOW_COMPANY_INFO_IN_FOOTER",
+            "value": "true",
+            "category": "pdf",
+            "data_type": "boolean",
+            "description": "Show company name and email in PDF footer"
+        },
     ]
 
     # Insert all settings

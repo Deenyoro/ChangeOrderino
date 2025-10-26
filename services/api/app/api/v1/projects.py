@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.auth import get_current_user, TokenData
+from app.core.auth import get_current_user_synced, TokenData
 from app.models.project import Project
 from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse
 from app.services.audit_service import audit_service
@@ -21,7 +21,7 @@ async def list_projects(
     limit: int = 100,
     active_only: bool = True,
     db: AsyncSession = Depends(get_db),
-    current_user: TokenData = Depends(get_current_user),
+    current_user: TokenData = Depends(get_current_user_synced),
 ):
     """List all projects"""
     query = select(Project)
@@ -42,9 +42,19 @@ async def create_project(
     project_data: ProjectCreate,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    current_user: TokenData = Depends(get_current_user),
+    current_user: TokenData = Depends(get_current_user_synced),
 ):
     """Create a new project"""
+    # Check if project number already exists
+    existing_project = await db.execute(
+        select(Project).where(Project.project_number == project_data.project_number)
+    )
+    if existing_project.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Project number '{project_data.project_number}' already exists"
+        )
+
     # Convert to dict and populate defaults if not provided
     project_dict = project_data.model_dump()
 
@@ -109,8 +119,25 @@ async def create_project(
         user_agent=request.headers.get('user-agent'),
     )
 
-    await db.commit()
-    await db.refresh(project)
+    try:
+        await db.commit()
+        await db.refresh(project)
+    except Exception as e:
+        await db.rollback()
+        # Handle database integrity errors
+        if "duplicate key" in str(e).lower() or "unique constraint" in str(e).lower():
+            if "project_number" in str(e):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Project number '{project_data.project_number}' already exists"
+                )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="A project with this information already exists"
+                )
+        # Re-raise other errors
+        raise
 
     return project
 
@@ -119,7 +146,7 @@ async def create_project(
 async def get_project(
     project_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: TokenData = Depends(get_current_user),
+    current_user: TokenData = Depends(get_current_user_synced),
 ):
     """Get a single project"""
     result = await db.execute(
@@ -142,7 +169,7 @@ async def update_project(
     project_data: ProjectUpdate,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    current_user: TokenData = Depends(get_current_user),
+    current_user: TokenData = Depends(get_current_user_synced),
 ):
     """Update a project"""
     result = await db.execute(
@@ -187,7 +214,7 @@ async def delete_project(
     project_id: UUID,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    current_user: TokenData = Depends(get_current_user),
+    current_user: TokenData = Depends(get_current_user_synced),
 ):
     """Delete a project (soft delete by marking inactive)"""
     result = await db.execute(

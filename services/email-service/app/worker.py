@@ -33,6 +33,32 @@ AsyncSessionLocal = async_sessionmaker(
 )
 
 
+async def get_setting_value(session: AsyncSession, key: str, default: str = "") -> str:
+    """
+    Fetch a setting value from app_settings
+
+    Args:
+        session: Database session
+        key: Setting key
+        default: Default value if not found
+
+    Returns:
+        Setting value or default
+    """
+    try:
+        stmt = select(AppSettings).where(AppSettings.key == key)
+        result = await session.execute(stmt)
+        setting = result.scalar_one_or_none()
+
+        if setting and setting.value:
+            return setting.value
+        return default
+
+    except Exception as e:
+        logger.error(f"Failed to fetch setting {key}: {str(e)}", exc_info=True)
+        return default
+
+
 async def get_company_logo_url(session: AsyncSession) -> Optional[str]:
     """
     Fetch company logo URL from app_settings
@@ -43,18 +69,50 @@ async def get_company_logo_url(session: AsyncSession) -> Optional[str]:
     Returns:
         Logo URL or None if not set
     """
-    try:
-        stmt = select(AppSettings).where(AppSettings.key == 'COMPANY_LOGO_URL')
-        result = await session.execute(stmt)
-        setting = result.scalar_one_or_none()
+    value = await get_setting_value(session, 'COMPANY_LOGO_URL')
+    return value if value else None
 
-        if setting and setting.value:
-            return setting.value
-        return None
 
-    except Exception as e:
-        logger.error(f"Failed to fetch company logo URL: {str(e)}", exc_info=True)
-        return None
+async def get_email_template_settings(session: AsyncSession, email_type: str) -> Dict[str, str]:
+    """
+    Fetch email template settings from app_settings
+
+    Args:
+        session: Database session
+        email_type: Type of email ('rfco', 'reminder', 'approval')
+
+    Returns:
+        Dictionary of template settings
+    """
+    if email_type == 'rfco':
+        return {
+            'subject': await get_setting_value(session, 'EMAIL_RFCO_SUBJECT', 'RFCO {tnm_number} - {project_name}'),
+            'greeting': await get_setting_value(session, 'EMAIL_RFCO_GREETING', 'Dear General Contractor,'),
+            'intro': await get_setting_value(session, 'EMAIL_RFCO_INTRO',
+                'Please review the following Request for Change Order (RFCO) for your approval.'),
+            'button_text': await get_setting_value(session, 'EMAIL_RFCO_BUTTON_TEXT', 'Review & Approve RFCO'),
+            'footer_text': await get_setting_value(session, 'EMAIL_RFCO_FOOTER_TEXT',
+                'If you have any questions about this change order, please contact us at {company_email} or {company_phone}.'),
+        }
+    elif email_type == 'reminder':
+        return {
+            'subject': await get_setting_value(session, 'EMAIL_REMINDER_SUBJECT',
+                'REMINDER #{reminder_number}: RFCO {tnm_number} - {project_name}'),
+            'greeting': await get_setting_value(session, 'EMAIL_REMINDER_GREETING', 'Dear General Contractor,'),
+            'intro': await get_setting_value(session, 'EMAIL_REMINDER_INTRO',
+                'This is a friendly reminder that the following Request for Change Order (RFCO) is still pending your review and approval.'),
+            'button_text': await get_setting_value(session, 'EMAIL_REMINDER_BUTTON_TEXT', 'Review & Approve RFCO'),
+            'footer_text': await get_setting_value(session, 'EMAIL_REMINDER_FOOTER_TEXT',
+                'If you need additional details or have questions about this change order, please contact us immediately.'),
+        }
+    elif email_type == 'approval':
+        return {
+            'subject': await get_setting_value(session, 'EMAIL_APPROVAL_SUBJECT',
+                'Change Order {status}: {tnm_number} - {project_name}'),
+            'intro': await get_setting_value(session, 'EMAIL_APPROVAL_INTRO',
+                'A decision has been made on the following change order.'),
+        }
+    return {}
 
 
 async def get_tnm_ticket_with_project(
@@ -210,7 +268,8 @@ def send_rfco_email(
     tnm_ticket_id: str,
     to_email: str,
     approval_token: str,
-    retry_count: int = 0
+    retry_count: int = 0,
+    pdf_base64: str = None
 ) -> bool:
     """
     Send RFCO email (job function - must be synchronous for RQ)
@@ -220,18 +279,20 @@ def send_rfco_email(
         to_email: Recipient email
         approval_token: Approval token for link
         retry_count: Current retry count
+        pdf_base64: Base64-encoded PDF bytes to attach
 
     Returns:
         True if sent successfully
     """
-    return asyncio.run(_send_rfco_email_async(tnm_ticket_id, to_email, approval_token, retry_count))
+    return asyncio.run(_send_rfco_email_async(tnm_ticket_id, to_email, approval_token, retry_count, pdf_base64))
 
 
 async def _send_rfco_email_async(
     tnm_ticket_id: str,
     to_email: str,
     approval_token: str,
-    retry_count: int
+    retry_count: int,
+    pdf_base64: str = None
 ) -> bool:
     """Async implementation of send_rfco_email"""
     logger.info(f"Processing RFCO email job for ticket {tnm_ticket_id}")
@@ -256,19 +317,38 @@ async def _send_rfco_email_async(
             # Fetch company logo URL
             company_logo_url = await get_company_logo_url(session)
 
+            # Fetch email template settings
+            template_settings = await get_email_template_settings(session, 'rfco')
+
             # Render email
             html_body, subject = template_service.render_rfco_email(
                 tnm_ticket=ticket_dict,
                 project=project_dict,
                 approval_link=approval_link,
-                company_logo_url=company_logo_url
+                company_logo_url=company_logo_url,
+                template_settings=template_settings
             )
+
+            # Prepare PDF attachment if provided
+            attachments = None
+            if pdf_base64:
+                try:
+                    import base64
+                    pdf_bytes = base64.b64decode(pdf_base64)
+                    tnm_number = ticket_dict.get('tnm_number', 'RFCO')
+                    filename = f"RFCO-{tnm_number}.pdf"
+                    attachments = [(filename, pdf_bytes)]
+                    logger.info(f"PDF attachment prepared: {filename} ({len(pdf_bytes)} bytes)")
+                except Exception as e:
+                    logger.error(f"Failed to decode PDF attachment: {str(e)}")
+                    # Continue without attachment
 
             # Send email
             success = await smtp_service.send_email(
                 to_email=to_email,
                 subject=subject,
-                html_body=html_body
+                html_body=html_body,
+                attachments=attachments
             )
 
             # Log to database
@@ -368,6 +448,9 @@ async def _send_reminder_email_async(
             # Fetch company logo URL
             company_logo_url = await get_company_logo_url(session)
 
+            # Fetch email template settings
+            template_settings = await get_email_template_settings(session, 'reminder')
+
             # Render email
             html_body, subject = template_service.render_reminder_email(
                 tnm_ticket=ticket_dict,
@@ -375,7 +458,8 @@ async def _send_reminder_email_async(
                 approval_link=approval_link,
                 reminder_number=reminder_number,
                 days_pending=days_pending,
-                company_logo_url=company_logo_url
+                company_logo_url=company_logo_url,
+                template_settings=template_settings
             )
 
             # Send email
@@ -466,12 +550,16 @@ async def _send_approval_confirmation_email_async(
             # Fetch company logo URL
             company_logo_url = await get_company_logo_url(session)
 
+            # Fetch email template settings
+            template_settings = await get_email_template_settings(session, 'approval')
+
             # Render email
             html_body, subject = template_service.render_approval_confirmation_email(
                 tnm_ticket=ticket_dict,
                 project=project_dict,
                 ticket_link=ticket_link,
-                company_logo_url=company_logo_url
+                company_logo_url=company_logo_url,
+                template_settings=template_settings
             )
 
             # Send to each internal email

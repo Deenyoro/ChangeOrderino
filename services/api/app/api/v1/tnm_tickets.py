@@ -31,6 +31,7 @@ from app.schemas.tnm_ticket import (
 from app.services.pdf_generator import pdf_generator
 from app.services.queue_service import queue_service
 from app.services.audit_service import audit_service
+from app.utils.pdf_helpers import prepare_ticket_data_for_pdf, prepare_project_data_for_pdf
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -356,104 +357,71 @@ async def get_tnm_pdf(
     current_user: TokenData = Depends(get_current_user),
 ):
     """Generate PDF for TNM ticket"""
-    # Fetch ticket with all relationships
-    result = await db.execute(
-        select(TNMTicket)
-        .where(TNMTicket.id == ticket_id)
-        .options(
-            selectinload(TNMTicket.project),
-            selectinload(TNMTicket.labor_items),
-            selectinload(TNMTicket.material_items),
-            selectinload(TNMTicket.equipment_items),
-            selectinload(TNMTicket.subcontractor_items),
+    try:
+        # Fetch ticket with all relationships
+        result = await db.execute(
+            select(TNMTicket)
+            .where(TNMTicket.id == ticket_id)
+            .options(
+                selectinload(TNMTicket.project),
+                selectinload(TNMTicket.labor_items),
+                selectinload(TNMTicket.material_items),
+                selectinload(TNMTicket.equipment_items),
+                selectinload(TNMTicket.subcontractor_items),
+            )
         )
-    )
-    ticket = result.scalar_one_or_none()
+        ticket = result.scalar_one_or_none()
 
-    if not ticket:
-        raise HTTPException(status_code=404, detail="TNM ticket not found")
+        if not ticket:
+            raise HTTPException(status_code=404, detail="TNM ticket not found")
 
-    # Convert to dict for template
-    ticket_data = {
-        'tnm_number': ticket.tnm_number,
-        'rfco_number': ticket.rfco_number,
-        'title': ticket.title,
-        'description': ticket.description,
-        'proposal_date': ticket.proposal_date,
-        'submitter_name': ticket.submitter_name,
-        'submitter_email': ticket.submitter_email,
-        'notes': ticket.notes,
-        'labor_items': [
-            {
-                'description': item.description,
-                'hours': item.hours,
-                'labor_type': item.labor_type.value if hasattr(item.labor_type, 'value') else str(item.labor_type),
-                'rate_per_hour': item.rate_per_hour,
-                'subtotal': item.subtotal,
+        if not ticket.project:
+            raise HTTPException(status_code=404, detail="Project not found for this ticket")
+
+        logger.info(f"Generating PDF for TNM ticket {ticket.tnm_number}")
+
+        # Fetch settings from database
+        from app.models.app_settings import AppSettings
+        settings_result = await db.execute(
+            select(AppSettings).where(
+                AppSettings.key.in_([
+                    'COMPANY_NAME', 'COMPANY_EMAIL', 'COMPANY_PHONE',
+                    'PDF_HEADER_SHOW_COMPANY_INFO', 'PDF_DOCUMENT_TITLE', 'PDF_PRIMARY_COLOR',
+                    'PDF_SHOW_PROJECT_INFO_SECTION', 'PDF_SHOW_NOTES_SECTION',
+                    'PDF_SHOW_SIGNATURE_SECTION', 'PDF_SIGNATURE_TITLE',
+                    'PDF_FOOTER_TEXT', 'PDF_SHOW_COMPANY_INFO_IN_FOOTER'
+                ])
+            )
+        )
+        settings_dict = {s.key: s.get_typed_value() for s in settings_result.scalars().all()}
+
+        # Use helper functions to prepare data
+        ticket_data = prepare_ticket_data_for_pdf(ticket)
+        project_data = prepare_project_data_for_pdf(ticket.project)
+
+        # Generate PDF with settings
+        pdf_content = pdf_generator.generate_rfco_pdf(
+            ticket_data,
+            project_data,
+            settings=settings_dict
+        )
+
+        logger.info(f"PDF generated successfully for {ticket.tnm_number}, size: {len(pdf_content)} bytes")
+
+        # Return as download
+        filename = f"RFCO-{ticket.tnm_number}.pdf"
+        return Response(
+            content=pdf_content,
+            media_type='application/pdf',
+            headers={
+                'Content-Disposition': f'attachment; filename="{filename}"'
             }
-            for item in ticket.labor_items
-        ],
-        'material_items': [
-            {
-                'description': item.description,
-                'quantity': item.quantity,
-                'unit': item.unit,
-                'unit_price': item.unit_price,
-                'subtotal': item.subtotal,
-            }
-            for item in ticket.material_items
-        ],
-        'equipment_items': [
-            {
-                'description': item.description,
-                'quantity': item.quantity,
-                'unit': item.unit,
-                'unit_price': item.unit_price,
-                'subtotal': item.subtotal,
-            }
-            for item in ticket.equipment_items
-        ],
-        'subcontractor_items': [
-            {
-                'description': item.description,
-                'subcontractor_name': item.subcontractor_name,
-                'proposal_date': item.proposal_date,
-                'amount': item.amount,
-            }
-            for item in ticket.subcontractor_items
-        ],
-        'labor_subtotal': ticket.labor_subtotal,
-        'labor_ohp_percent': ticket.labor_ohp_percent,
-        'labor_total': ticket.labor_total,
-        'material_subtotal': ticket.material_subtotal,
-        'material_ohp_percent': ticket.material_ohp_percent,
-        'material_total': ticket.material_total,
-        'equipment_subtotal': ticket.equipment_subtotal,
-        'equipment_ohp_percent': ticket.equipment_ohp_percent,
-        'equipment_total': ticket.equipment_total,
-        'subcontractor_subtotal': ticket.subcontractor_subtotal,
-        'subcontractor_ohp_percent': ticket.subcontractor_ohp_percent,
-        'subcontractor_total': ticket.subcontractor_total,
-        'proposal_amount': ticket.proposal_amount,
-    }
-
-    project_data = {
-        'name': ticket.project.name,
-        'project_number': ticket.project.project_number,
-    }
-
-    # Generate PDF
-    pdf_content = pdf_generator.generate_rfco_pdf(ticket_data, project_data)
-
-    # Return as download
-    filename = f"RFCO-{ticket.tnm_number}.pdf"
-    return Response(
-        content=pdf_content,
-        media_type='application/pdf',
-        headers={
-            'Content-Disposition': f'attachment; filename="{filename}"'
-        }
-    )
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating PDF for ticket {ticket_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to generate PDF: {str(e)}")
 
 
 @router.post("/{ticket_id}/send/", response_model=SendRFCOResponse)
@@ -542,12 +510,41 @@ async def send_rfco(
     await db.commit()
     await db.refresh(ticket)
 
+    # Generate PDF for email attachment
+    pdf_bytes = None
+    try:
+        logger.info(f"Generating PDF for email attachment: {ticket.tnm_number}")
+
+        # Fetch settings from database
+        from app.models.app_settings import AppSettings
+        settings_result = await db.execute(
+            select(AppSettings).where(
+                AppSettings.key.in_([
+                    'COMPANY_NAME', 'COMPANY_EMAIL', 'COMPANY_PHONE',
+                    'PDF_HEADER_SHOW_COMPANY_INFO', 'PDF_DOCUMENT_TITLE', 'PDF_PRIMARY_COLOR',
+                    'PDF_SHOW_PROJECT_INFO_SECTION', 'PDF_SHOW_NOTES_SECTION',
+                    'PDF_SHOW_SIGNATURE_SECTION', 'PDF_SIGNATURE_TITLE',
+                    'PDF_FOOTER_TEXT', 'PDF_SHOW_COMPANY_INFO_IN_FOOTER'
+                ])
+            )
+        )
+        settings_dict = {s.key: s.get_typed_value() for s in settings_result.scalars().all()}
+
+        ticket_data = prepare_ticket_data_for_pdf(ticket)
+        project_data = prepare_project_data_for_pdf(ticket.project)
+        pdf_bytes = pdf_generator.generate_rfco_pdf(ticket_data, project_data, settings=settings_dict)
+        logger.info(f"PDF generated successfully for email: {len(pdf_bytes)} bytes")
+    except Exception as e:
+        logger.error(f"Failed to generate PDF for email attachment: {str(e)}", exc_info=True)
+        # Continue without PDF - email will still be sent
+
     # Queue email job in Redis for email-service worker to process
     job_id = queue_service.enqueue_rfco_email(
         tnm_ticket_id=str(ticket_id),
         to_email=request_data.gc_email,
         approval_token=token,
-        retry_count=0
+        retry_count=0,
+        pdf_bytes=pdf_bytes
     )
 
     if not job_id:
@@ -652,12 +649,41 @@ async def send_reminder(
     await db.commit()
     await db.refresh(ticket)
 
+    # Generate PDF for email attachment
+    pdf_bytes = None
+    try:
+        logger.info(f"Generating PDF for reminder email attachment: {ticket.tnm_number}")
+
+        # Fetch settings from database
+        from app.models.app_settings import AppSettings
+        settings_result = await db.execute(
+            select(AppSettings).where(
+                AppSettings.key.in_([
+                    'COMPANY_NAME', 'COMPANY_EMAIL', 'COMPANY_PHONE',
+                    'PDF_HEADER_SHOW_COMPANY_INFO', 'PDF_DOCUMENT_TITLE', 'PDF_PRIMARY_COLOR',
+                    'PDF_SHOW_PROJECT_INFO_SECTION', 'PDF_SHOW_NOTES_SECTION',
+                    'PDF_SHOW_SIGNATURE_SECTION', 'PDF_SIGNATURE_TITLE',
+                    'PDF_FOOTER_TEXT', 'PDF_SHOW_COMPANY_INFO_IN_FOOTER'
+                ])
+            )
+        )
+        settings_dict = {s.key: s.get_typed_value() for s in settings_result.scalars().all()}
+
+        ticket_data = prepare_ticket_data_for_pdf(ticket)
+        project_data = prepare_project_data_for_pdf(ticket.project)
+        pdf_bytes = pdf_generator.generate_rfco_pdf(ticket_data, project_data, settings=settings_dict)
+        logger.info(f"PDF generated successfully for reminder: {len(pdf_bytes)} bytes")
+    except Exception as e:
+        logger.error(f"Failed to generate PDF for reminder attachment: {str(e)}", exc_info=True)
+        # Continue without PDF - email will still be sent
+
     # Queue reminder email
     job_id = queue_service.enqueue_rfco_email(
         tnm_ticket_id=str(ticket_id),
         to_email=ticket.project.gc_email,
         approval_token=ticket.approval_token,
-        retry_count=ticket.reminder_count
+        retry_count=ticket.reminder_count,
+        pdf_bytes=pdf_bytes
     )
 
     if not job_id:

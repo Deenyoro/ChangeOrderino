@@ -117,6 +117,8 @@ const SettingsPage: React.FC = () => {
   const renderSettingRow = (setting: AppSetting) => {
     const isEditing = editingKey === setting.key;
     const isPassword = setting.key.includes('PASSWORD');
+    const isEmailTemplate = setting.category === 'email_templates';
+    const isPDFFooterText = setting.key === 'PDF_FOOTER_TEXT';
 
     // Don't allow editing passwords through UI
     if (isPassword) {
@@ -139,22 +141,32 @@ const SettingsPage: React.FC = () => {
         </td>
         <td className="py-3 px-4">
           {isEditing ? (
-            <input
-              type={setting.data_type === 'boolean' ? 'checkbox' : 'text'}
-              value={editValue}
-              checked={setting.data_type === 'boolean' ? editValue.toLowerCase() === 'true' : undefined}
-              onChange={(e) =>
-                setEditValue(
-                  setting.data_type === 'boolean'
-                    ? e.target.checked.toString()
-                    : e.target.value
-                )
-              }
-              className="border rounded px-3 py-2 w-full max-w-md"
-              autoFocus
-            />
+            (isEmailTemplate || isPDFFooterText) ? (
+              <textarea
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                className="border rounded px-3 py-2 w-full max-w-2xl font-mono text-sm"
+                rows={3}
+                autoFocus
+              />
+            ) : (
+              <input
+                type={setting.data_type === 'boolean' ? 'checkbox' : 'text'}
+                value={editValue}
+                checked={setting.data_type === 'boolean' ? editValue.toLowerCase() === 'true' : undefined}
+                onChange={(e) =>
+                  setEditValue(
+                    setting.data_type === 'boolean'
+                      ? e.target.checked.toString()
+                      : e.target.value
+                  )
+                }
+                className="border rounded px-3 py-2 w-full max-w-md"
+                autoFocus
+              />
+            )
           ) : (
-            <span className="text-gray-900">
+            <span className={`text-gray-900 ${(isEmailTemplate || isPDFFooterText) ? 'font-mono text-sm' : ''}`}>
               {setting.data_type === 'boolean'
                 ? setting.value.toLowerCase() === 'true'
                   ? '✓ Enabled'
@@ -376,6 +388,18 @@ const SettingsPage: React.FC = () => {
         'Approval Settings',
         'approval',
         'Configure approval link expiration time.'
+      )}
+
+      {renderCategory(
+        'Email Templates',
+        'email_templates',
+        'Customize the content of automated emails. Use variables like {tnm_number}, {project_name}, {company_email}, {company_phone}, {reminder_number}, {status}.'
+      )}
+
+      {renderCategory(
+        'PDF Settings',
+        'pdf',
+        'Customize the appearance of generated PDF documents. Use variables like {company_name}, {company_email}, {company_phone}.'
       )}
 
       {/* Info Box */}

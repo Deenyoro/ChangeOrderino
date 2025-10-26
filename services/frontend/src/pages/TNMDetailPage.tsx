@@ -16,6 +16,7 @@ import {
   useManualApprovalOverride,
 } from '../hooks/useTNMTickets';
 import { useProject } from '../hooks/useProjects';
+import { tnmTicketsApi } from '../api/tnmTickets';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { Button } from '../components/common/Button';
@@ -37,6 +38,7 @@ export const TNMDetailPage: React.FC = () => {
   const [isOHPEditModalOpen, setIsOHPEditModalOpen] = useState(false);
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
   const [isManualApprovalModalOpen, setIsManualApprovalModalOpen] = useState(false);
+  const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
   const [gcEmail, setGcEmail] = useState('');
   const [customOHP, setCustomOHP] = useState({
     labor: 0,
@@ -138,6 +140,32 @@ export const TNMDetailPage: React.FC = () => {
     }
   };
 
+  const handleDownloadPDF = async () => {
+    try {
+      setIsDownloadingPDF(true);
+      const blob = await tnmTicketsApi.generatePDF(ticket.id);
+
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `RFCO-${ticket.tnm_number}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success('PDF downloaded successfully');
+    } catch (error) {
+      console.error('PDF download error:', error);
+      toast.error('Failed to download PDF');
+    } finally {
+      setIsDownloadingPDF(false);
+    }
+  };
+
   const canEdit = ticket.status === TNMStatus.DRAFT || ticket.status === TNMStatus.PENDING_REVIEW;
   const canSend = ticket.status === TNMStatus.READY_TO_SEND || ticket.status === TNMStatus.PENDING_REVIEW;
   const canRemind = ticket.status === TNMStatus.SENT || ticket.status === TNMStatus.VIEWED;
@@ -231,7 +259,7 @@ export const TNMDetailPage: React.FC = () => {
               Manual Override
             </Button>
           )}
-          <Button variant="secondary" onClick={() => {/* Generate PDF */}}>
+          <Button variant="secondary" onClick={handleDownloadPDF} isLoading={isDownloadingPDF}>
             <FileDown className="w-4 h-4 mr-2" />
             Download PDF
           </Button>

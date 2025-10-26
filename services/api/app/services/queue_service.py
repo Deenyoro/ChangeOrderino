@@ -90,7 +90,8 @@ class QueueService:
         tnm_ticket_id: str,
         to_email: str,
         approval_token: str,
-        retry_count: int = 0
+        retry_count: int = 0,
+        pdf_bytes: Optional[bytes] = None
     ) -> Optional[str]:
         """
         Enqueue an RFCO email job to be processed by email-service worker
@@ -100,6 +101,7 @@ class QueueService:
             to_email: Recipient email
             approval_token: JWT approval token for link
             retry_count: Current retry count
+            pdf_bytes: Optional PDF bytes to attach to email
 
         Returns:
             Job ID if enqueued successfully, None otherwise
@@ -110,20 +112,26 @@ class QueueService:
                 logger.error(f"Cannot enqueue RFCO email: Redis not connected")
                 return None
 
+            # Convert PDF bytes to base64 if provided (for JSON serialization)
+            import base64
+            pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8') if pdf_bytes else None
+
             job = self.email_queue.enqueue(
                 'app.worker.send_rfco_email',  # This function exists in email-service
                 tnm_ticket_id=tnm_ticket_id,
                 to_email=to_email,
                 approval_token=approval_token,
                 retry_count=retry_count,
+                pdf_base64=pdf_base64,
                 job_timeout='10m',
                 result_ttl=86400,  # Keep results for 1 day
                 failure_ttl=604800  # Keep failures for 7 days
             )
 
+            pdf_info = f" with PDF ({len(pdf_bytes)} bytes)" if pdf_bytes else ""
             logger.info(
                 f"✓ Enqueued RFCO email job {job.id} for ticket {tnm_ticket_id} "
-                f"to {to_email}"
+                f"to {to_email}{pdf_info}"
             )
             return str(job.id)
 

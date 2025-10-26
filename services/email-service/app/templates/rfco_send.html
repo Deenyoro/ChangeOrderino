@@ -7,10 +7,10 @@
 </div>
 
 <div class="content">
-    <p>Dear General Contractor,</p>
+    <p>{{ email_greeting }}</p>
 
     <p>
-        Please review the following Request for Change Order (RFCO) for your approval.
+        {{ email_intro }}
     </p>
 
     <div class="info-box">
@@ -138,7 +138,7 @@
 
     <div class="button-container">
         <a href="{{ approval_link }}" class="button">
-            Review & Approve RFCO
+            {{ email_button_text }}
         </a>
     </div>
 
@@ -147,7 +147,7 @@
     </p>
 
     <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #64748b;">
-        If you have any questions about this change order, please contact us at {{ company_email }} or {{ company_phone }}.
+        {{ email_footer_text }}
     </p>
 </div>
 {% endblock %}

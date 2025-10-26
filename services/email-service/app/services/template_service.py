@@ -44,7 +44,8 @@ class TemplateService:
         tnm_ticket: Dict[str, Any],
         project: Dict[str, Any],
         approval_link: str,
-        company_logo_url: Optional[str] = None
+        company_logo_url: Optional[str] = None,
+        template_settings: Optional[Dict[str, str]] = None
     ) -> tuple[str, str]:
         """
         Render initial RFCO send email
@@ -54,12 +55,29 @@ class TemplateService:
             project: Project data
             approval_link: Approval URL
             company_logo_url: Company logo URL (optional)
+            template_settings: Email template text overrides (optional)
 
         Returns:
             Tuple of (html_body, subject)
         """
         try:
-            subject = f"RFCO {tnm_ticket['tnm_number']} - {project['name']}"
+            # Use template settings or defaults
+            settings = template_settings or {}
+            subject_template = settings.get('subject', 'RFCO {tnm_number} - {project_name}')
+
+            # Replace variables in subject
+            subject = subject_template.format(
+                tnm_number=tnm_ticket['tnm_number'],
+                project_name=project['name']
+            )
+
+            # Replace variables in footer text
+            footer_template = settings.get('footer_text',
+                'If you have any questions about this change order, please contact us at {company_email} or {company_phone}.')
+            footer_text = footer_template.format(
+                company_email=config.COMPANY_EMAIL,
+                company_phone=config.COMPANY_PHONE
+            )
 
             context = {
                 'subject': subject,
@@ -90,6 +108,11 @@ class TemplateService:
                 'subcontractor_total': float(tnm_ticket.get('subcontractor_total', 0)),
                 'proposal_amount': float(tnm_ticket.get('proposal_amount', 0)),
                 'approval_link': approval_link,
+                # Template settings
+                'email_greeting': settings.get('greeting', 'Dear General Contractor,'),
+                'email_intro': settings.get('intro', 'Please review the following Request for Change Order (RFCO) for your approval.'),
+                'email_button_text': settings.get('button_text', 'Review & Approve RFCO'),
+                'email_footer_text': footer_text,
             }
 
             template = self.env.get_template('rfco_send.html')
@@ -112,7 +135,8 @@ class TemplateService:
         approval_link: str,
         reminder_number: int,
         days_pending: int,
-        company_logo_url: Optional[str] = None
+        company_logo_url: Optional[str] = None,
+        template_settings: Optional[Dict[str, str]] = None
     ) -> tuple[str, str]:
         """
         Render reminder email
@@ -124,12 +148,22 @@ class TemplateService:
             reminder_number: Which reminder this is (1, 2, 3, etc.)
             days_pending: Number of days since initial send
             company_logo_url: Company logo URL (optional)
+            template_settings: Email template text overrides (optional)
 
         Returns:
             Tuple of (html_body, subject)
         """
         try:
-            subject = f"REMINDER #{reminder_number}: RFCO {tnm_ticket['tnm_number']} - {project['name']}"
+            # Use template settings or defaults
+            settings = template_settings or {}
+            subject_template = settings.get('subject', 'REMINDER #{reminder_number}: RFCO {tnm_number} - {project_name}')
+
+            # Replace variables in subject
+            subject = subject_template.format(
+                reminder_number=reminder_number,
+                tnm_number=tnm_ticket['tnm_number'],
+                project_name=project['name']
+            )
 
             context = {
                 'subject': subject,
@@ -147,6 +181,11 @@ class TemplateService:
                 'approval_link': approval_link,
                 'reminder_number': reminder_number,
                 'days_pending': days_pending,
+                # Template settings
+                'email_greeting': settings.get('greeting', 'Dear General Contractor,'),
+                'email_intro': settings.get('intro', 'This is a friendly reminder that the following Request for Change Order (RFCO) is still pending your review and approval.'),
+                'email_button_text': settings.get('button_text', 'Review & Approve RFCO'),
+                'email_footer_text': settings.get('footer_text', 'If you need additional details or have questions about this change order, please contact us immediately.'),
             }
 
             template = self.env.get_template('reminder.html')
@@ -169,7 +208,8 @@ class TemplateService:
         ticket_link: str,
         line_items: Optional[list[Dict[str, Any]]] = None,
         gc_notes: Optional[str] = None,
-        company_logo_url: Optional[str] = None
+        company_logo_url: Optional[str] = None,
+        template_settings: Optional[Dict[str, str]] = None
     ) -> tuple[str, str]:
         """
         Render approval confirmation email (sent to internal team)
@@ -181,14 +221,23 @@ class TemplateService:
             line_items: List of line item approvals
             gc_notes: Notes from GC
             company_logo_url: Company logo URL (optional)
+            template_settings: Email template text overrides (optional)
 
         Returns:
             Tuple of (html_body, subject)
         """
         try:
+            # Use template settings or defaults
+            settings = template_settings or {}
             status = tnm_ticket.get('status', 'unknown')
             status_label = status.replace('_', ' ').title()
-            subject = f"Change Order {status_label} - {tnm_ticket['tnm_number']}"
+
+            subject_template = settings.get('subject', 'Change Order {status}: {tnm_number} - {project_name}')
+            subject = subject_template.format(
+                status=status_label,
+                tnm_number=tnm_ticket['tnm_number'],
+                project_name=project['name']
+            )
 
             context = {
                 'subject': subject,
@@ -208,6 +257,8 @@ class TemplateService:
                 'ticket_link': ticket_link,
                 'line_items': line_items or [],
                 'gc_notes': gc_notes,
+                # Template settings
+                'email_intro': settings.get('intro', 'A decision has been made on the following change order.'),
             }
 
             template = self.env.get_template('approval_confirmation.html')

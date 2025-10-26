@@ -11,10 +11,10 @@
         <strong>Reminder #{{ reminder_number }}</strong> - This change order is still awaiting your approval.
     </div>
 
-    <p>Dear General Contractor,</p>
+    <p>{{ email_greeting }}</p>
 
     <p>
-        This is a friendly reminder that the following Request for Change Order (RFCO) is still pending your review and approval.
+        {{ email_intro }}
     </p>
 
     <div class="info-box">
@@ -63,7 +63,7 @@
 
     <div class="button-container">
         <a href="{{ approval_link }}" class="button">
-            Review & Approve RFCO
+            {{ email_button_text }}
         </a>
     </div>
 
@@ -73,7 +73,7 @@
 
     <div class="alert" style="margin-top: 30px;">
         <strong>Need More Information?</strong><br>
-        If you need additional details or have questions about this change order, please contact us immediately.
+        {{ email_footer_text }}
     </div>
 
     <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #64748b;">

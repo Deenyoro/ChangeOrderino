@@ -78,6 +78,10 @@ class Settings(BaseSettings):
     COMPANY_PHONE: str = Field(default="555-123-4567")
     TZ: str = Field(default="America/New_York")
 
+    # ============ FRONTEND URL ============
+    # Public-facing URL for generating links in emails
+    FRONTEND_URL: str = Field(default="http://localhost")
+
     # ============ CHANGE ORDER SETTINGS ============
     DEFAULT_MATERIAL_OHP: float = Field(default=15.0)
     DEFAULT_LABOR_OHP: float = Field(default=20.0)
