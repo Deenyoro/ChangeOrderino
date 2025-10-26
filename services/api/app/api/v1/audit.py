@@ -20,6 +20,8 @@ class AuditLogResponse(BaseModel):
     """Audit log response schema"""
     id: str
     user_id: str | None
+    user_email: str | None
+    user_name: str | None
     entity_type: str
     entity_id: str
     action: str
@@ -64,6 +66,8 @@ async def get_audit_logs(
         AuditLogResponse(
             id=str(log.id),
             user_id=str(log.user_id) if log.user_id else None,
+            user_email=log.user.email if log.user else None,
+            user_name=log.user.full_name if log.user else None,
             entity_type=log.entity_type,
             entity_id=str(log.entity_id),
             action=log.action,
@@ -105,6 +109,8 @@ async def get_user_audit_logs(
         AuditLogResponse(
             id=str(log.id),
             user_id=str(log.user_id) if log.user_id else None,
+            user_email=log.user.email if log.user else None,
+            user_name=log.user.full_name if log.user else None,
             entity_type=log.entity_type,
             entity_id=str(log.entity_id),
             action=log.action,
@@ -155,6 +161,8 @@ async def list_audit_logs(
         AuditLogResponse(
             id=str(log.id),
             user_id=str(log.user_id) if log.user_id else None,
+            user_email=log.user.email if log.user else None,
+            user_name=log.user.full_name if log.user else None,
             entity_type=log.entity_type,
             entity_id=str(log.entity_id),
             action=log.action,

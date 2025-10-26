@@ -1177,9 +1177,19 @@ export const TNMDetailPage: React.FC = () => {
                   </div>
 
                   {/* User Info */}
-                  {log.user_id && (
+                  {(log.user_name || log.user_email || log.user_id) && (
                     <div className="text-sm text-gray-600 mb-3">
-                      <span className="font-medium">User:</span> {log.user_id}
+                      <span className="font-medium">User:</span>{' '}
+                      <span title={log.user_id || undefined} className="cursor-help">
+                        {log.user_name && log.user_email
+                          ? `${log.user_name} (${log.user_email})`
+                          : log.user_name
+                          ? log.user_name
+                          : log.user_email
+                          ? log.user_email
+                          : log.user_id
+                        }
+                      </span>
                     </div>
                   )}
 

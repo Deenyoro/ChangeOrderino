@@ -1,5 +1,6 @@
 """Audit Log model"""
 from sqlalchemy import Column, String, Text, DateTime, func, ForeignKey
+from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID, JSONB, INET
 import uuid
 
@@ -23,6 +24,9 @@ class AuditLog(Base):
     user_agent = Column(Text)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    # Relationships
+    user = relationship("User", foreign_keys=[user_id], lazy="joined")
 
     def __repr__(self):
         return f"<AuditLog {self.action} on {self.entity_type} {self.entity_id}>"

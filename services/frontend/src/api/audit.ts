@@ -7,6 +7,8 @@ import apiClient from './client';
 export interface AuditLog {
   id: string;
   user_id: string | null;
+  user_email: string | null;
+  user_name: string | null;
   entity_type: string;
   entity_id: string;
   action: string;

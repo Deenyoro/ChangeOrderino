@@ -41,6 +41,14 @@ export const emailsApi = {
   },
 
   /**
+   * Get recently sent reminder emails (for verification system is working)
+   */
+  getRecentReminders: async (params?: { days?: number; limit?: number }): Promise<EmailLog[]> => {
+    const response = await apiClient.get('/emails/recent-reminders', { params });
+    return response.data;
+  },
+
+  /**
    * Retry a failed email
    */
   retryFailedEmail: async (emailId: string): Promise<void> => {

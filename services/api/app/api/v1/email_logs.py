@@ -99,6 +99,32 @@ async def get_failed_email_stats(
     )
 
 
+@router.get("/recent-reminders", response_model=List[EmailLogResponse])
+async def get_recent_reminders(
+    days: int = Query(7, ge=1, le=30),
+    limit: int = Query(50, ge=1, le=100),
+    current_user: TokenData = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get recently sent reminder emails (last N days) - for verification that system is working"""
+
+    cutoff_date = datetime.utcnow() - timedelta(days=days)
+
+    query = (
+        select(EmailLog)
+        .where(EmailLog.email_type == 'reminder')
+        .where(EmailLog.status == 'sent')
+        .where(EmailLog.sent_at >= cutoff_date)
+        .order_by(desc(EmailLog.sent_at))
+        .limit(limit)
+    )
+
+    result = await db.execute(query)
+    emails = result.scalars().all()
+
+    return emails
+
+
 @router.post("/{email_id}/retry")
 async def retry_failed_email(
     email_id: str,

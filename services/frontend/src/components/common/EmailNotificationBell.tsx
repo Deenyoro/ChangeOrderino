@@ -3,8 +3,8 @@
  */
 
 import React, { useState } from 'react';
-import { Bell, Mail, AlertTriangle, RefreshCw } from 'lucide-react';
-import { useFailedEmailsStats, useFailedEmails, useRetryEmail } from '../../hooks/useEmails';
+import { Bell, Mail, AlertTriangle, RefreshCw, CheckCircle } from 'lucide-react';
+import { useFailedEmailsStats, useFailedEmails, useRecentReminders, useRetryEmail } from '../../hooks/useEmails';
 import { formatDateTime } from '../../utils/formatters';
 import { Modal } from './Modal';
 import { Button } from './Button';
@@ -14,6 +14,7 @@ export const EmailNotificationBell: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { data: stats } = useFailedEmailsStats();
   const { data: failedEmails, refetch } = useFailedEmails({ limit: 50 });
+  const { data: recentReminders } = useRecentReminders({ days: 7, limit: 20 });
   const retryMutation = useRetryEmail();
 
   const failedCount = stats?.failed_last_24h || 0;
@@ -133,6 +134,43 @@ export const EmailNotificationBell: React.FC = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Recently Sent Reminders - Shows system is working */}
+          {recentReminders && recentReminders.length > 0 && (
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <h3 className="font-semibold text-gray-900">Recently Sent Reminders (Last 7 Days)</h3>
+                </div>
+                <span className="text-sm text-gray-500">{recentReminders.length} sent</span>
+              </div>
+              <p className="text-xs text-gray-600 mb-3">
+                These reminders were successfully delivered - confirmation the system is working
+              </p>
+              <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                {recentReminders.map((email) => (
+                  <div
+                    key={email.id}
+                    className="border border-green-200 bg-green-50 rounded-lg p-3 hover:bg-green-100 transition-colors"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2 flex-1">
+                        <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-gray-900 truncate">{email.subject}</div>
+                          <div className="text-xs text-gray-600 truncate">To: {email.to_email}</div>
+                        </div>
+                      </div>
+                      <div className="text-right ml-2">
+                        <div className="text-xs text-gray-500">{formatDateTime(email.sent_at || email.created_at)}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

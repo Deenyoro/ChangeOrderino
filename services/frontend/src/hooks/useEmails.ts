@@ -21,6 +21,14 @@ export const useFailedEmailsStats = () => {
   });
 };
 
+export const useRecentReminders = (params?: { days?: number; limit?: number }) => {
+  return useQuery({
+    queryKey: ['recent-reminders', params],
+    queryFn: () => emailsApi.getRecentReminders(params),
+    refetchInterval: 60000, // Refresh every 60 seconds
+  });
+};
+
 export const useRetryEmail = () => {
   const queryClient = useQueryClient();
 
