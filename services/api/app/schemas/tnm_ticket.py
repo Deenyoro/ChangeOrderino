@@ -137,6 +137,11 @@ class TNMTicketCreate(TNMTicketBase):
     equipment_items: List[EquipmentItemCreate] = []
     subcontractor_items: List[SubcontractorItemCreate] = []
 
+    # Attachments
+    signature_url: Optional[str] = None
+    photo_urls: Optional[List[str]] = None
+    notes: Optional[str] = None
+
 
 class TNMTicketUpdate(BaseModel):
     """Update TNM ticket schema"""
@@ -159,6 +164,10 @@ class TNMTicketUpdate(BaseModel):
     send_reminders_until_accepted: Optional[bool] = None
     send_reminders_until_paid: Optional[bool] = None
     notes: Optional[str] = None
+
+    # Attachments
+    signature_url: Optional[str] = None
+    photo_urls: Optional[List[str]] = None
 
 
 class TNMTicketResponse(TNMTicketBase):
@@ -202,6 +211,11 @@ class TNMTicketResponse(TNMTicketBase):
     material_items: List[MaterialItemResponse] = []
     equipment_items: List[EquipmentItemResponse] = []
     subcontractor_items: List[SubcontractorItemResponse] = []
+
+    # Attachments
+    signature_url: Optional[str] = None
+    photo_urls: Optional[List[str]] = None
+    notes: Optional[str] = None
 
     # Metadata
     email_sent_count: int

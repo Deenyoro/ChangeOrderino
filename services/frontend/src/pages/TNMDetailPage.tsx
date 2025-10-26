@@ -29,7 +29,7 @@ import { MaterialItemTable } from '../components/tnm/MaterialItemTable';
 import { EquipmentItemTable } from '../components/tnm/EquipmentItemTable';
 import { SubcontractorItemTable } from '../components/tnm/SubcontractorItemTable';
 import { TNMSummary } from '../components/tnm/TNMSummary';
-import { SignatureDisplay } from '../components/common/SignaturePad';
+import { SignaturePad, SignatureDisplay } from '../components/common/SignaturePad';
 import { formatDate, formatDateTime, formatCurrency } from '../utils/formatters';
 import { TNMStatus } from '../types/tnmTicket';
 
@@ -76,7 +76,10 @@ export const TNMDetailPage: React.FC = () => {
     rate_laborer: 0,
     notes: '',
     edit_reason: '',
+    signature_url: '',
+    photo_urls: [] as string[],
   });
+  const [showEditSignaturePad, setShowEditSignaturePad] = useState(false);
 
   const { data: ticket, isLoading } = useTNMTicket(id!);
   const { data: project } = useProject(ticket?.project_id || '');
@@ -126,6 +129,8 @@ export const TNMDetailPage: React.FC = () => {
         rate_laborer: ticket.rate_laborer || 0,
         notes: '',
         edit_reason: '',
+        signature_url: ticket.signature_url || '',
+        photo_urls: ticket.photo_urls || [],
       });
     }
   }, [ticket]);
@@ -241,9 +246,20 @@ export const TNMDetailPage: React.FC = () => {
     }
 
     try {
+      // Clean up data: convert empty strings to undefined for optional fields
+      const cleanedData = Object.fromEntries(
+        Object.entries(editData).map(([key, value]) => {
+          // For date fields and notes, convert empty strings to undefined
+          if ((key.includes('date') || key === 'notes') && value === '') {
+            return [key, undefined];
+          }
+          return [key, value];
+        })
+      );
+
       await editMutation.mutateAsync({
         id: ticket.id,
-        data: editData,
+        data: cleanedData,
       });
       setIsManualApprovalModalOpen(false);
       setOverrideMode('approve');
@@ -1080,6 +1096,41 @@ export const TNMDetailPage: React.FC = () => {
                   value={editData.rate_laborer}
                   onChange={(e) => setEditData({ ...editData, rate_laborer: parseFloat(e.target.value) || 0 })}
                 />
+              </div>
+            </div>
+
+            {/* Signature & Photos */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-gray-900">Signature & Documentation</h3>
+              <div>
+                {editData.signature_url ? (
+                  <SignatureDisplay
+                    signature={editData.signature_url}
+                    onRemove={() => setEditData({ ...editData, signature_url: '' })}
+                    label="GC Signature"
+                  />
+                ) : (
+                  <>
+                    {showEditSignaturePad ? (
+                      <SignaturePad
+                        onSave={(dataUrl) => {
+                          setEditData({ ...editData, signature_url: dataUrl });
+                          setShowEditSignaturePad(false);
+                        }}
+                        onCancel={() => setShowEditSignaturePad(false)}
+                      />
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => setShowEditSignaturePad(true)}
+                      >
+                        <FileText className="w-4 h-4 mr-2" />
+                        Add/Update GC Signature
+                      </Button>
+                    )}
+                  </>
+                )}
               </div>
             </div>
 

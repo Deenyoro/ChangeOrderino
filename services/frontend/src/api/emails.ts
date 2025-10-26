@@ -28,7 +28,7 @@ export const emailsApi = {
    * Get failed emails
    */
   getFailedEmails: async (params?: { limit?: number; offset?: number }): Promise<EmailLog[]> => {
-    const response = await apiClient.get('/emails/failed', { params });
+    const response = await apiClient.get('v1/emails/failed', { params });
     return response.data;
   },
 
@@ -36,7 +36,7 @@ export const emailsApi = {
    * Get failed emails statistics
    */
   getFailedEmailsStats: async (): Promise<FailedEmailsStats> => {
-    const response = await apiClient.get('/emails/failed/stats');
+    const response = await apiClient.get('v1/emails/failed/stats');
     return response.data;
   },
 
@@ -44,7 +44,7 @@ export const emailsApi = {
    * Get recently sent reminder emails (for verification system is working)
    */
   getRecentReminders: async (params?: { days?: number; limit?: number }): Promise<EmailLog[]> => {
-    const response = await apiClient.get('/emails/recent-reminders', { params });
+    const response = await apiClient.get('v1/emails/recent-reminders', { params });
     return response.data;
   },
 
@@ -52,6 +52,6 @@ export const emailsApi = {
    * Retry a failed email
    */
   retryFailedEmail: async (emailId: string): Promise<void> => {
-    await apiClient.post(`/emails/${emailId}/retry`);
+    await apiClient.post(`v1/emails/${emailId}/retry`);
   },
 };

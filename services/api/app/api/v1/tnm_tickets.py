@@ -37,10 +37,72 @@ from app.schemas.tnm_ticket import (
 from app.services.pdf_generator import pdf_generator
 from app.services.queue_service import queue_service
 from app.services.audit_service import audit_service
+from app.services.storage import storage_service
+from app.models.asset import Asset
 from app.utils.pdf_helpers import prepare_ticket_data_for_pdf, prepare_project_data_for_pdf
+from io import BytesIO
+import base64
+import re
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+def process_base64_signature(signature_data_url: str, ticket_id: UUID, user_id: UUID, db: AsyncSession) -> str:
+    """
+    Convert base64 data URL to actual file in MinIO
+    Returns: Public URL to the stored signature
+    """
+    if not signature_data_url or not signature_data_url.startswith('data:'):
+        # Not a data URL, return as-is (might already be a URL)
+        return signature_data_url
+
+    try:
+        # Parse data URL: data:image/png;base64,iVBORw0KG...
+        match = re.match(r'data:([^;]+);base64,(.+)', signature_data_url)
+        if not match:
+            logger.warning("Invalid data URL format")
+            return signature_data_url
+
+        mime_type = match.group(1)
+        base64_data = match.group(2)
+
+        # Decode base64
+        file_bytes = base64.b64decode(base64_data)
+        file_size = len(file_bytes)
+
+        # Determine extension
+        ext = 'png' if 'png' in mime_type else 'jpg'
+        filename = f"signature.{ext}"
+
+        # Upload to MinIO
+        storage_key, _ = storage_service.upload_file(
+            file_data=BytesIO(file_bytes),
+            filename=filename,
+            content_type=mime_type,
+            folder=f"tnm-tickets/{ticket_id}/signature",
+        )
+
+        # Create asset record (sync call - will be committed with ticket)
+        asset = Asset(
+            tnm_ticket_id=ticket_id,
+            filename=filename,
+            mime_type=mime_type,
+            file_size=file_size,
+            storage_key=storage_key,
+            asset_type='signature',
+            uploaded_by=user_id,
+        )
+        db.add(asset)
+
+        # Return public URL
+        return f"/storage/{storage_key}"
+
+    except Exception as e:
+        logger.error(f"Failed to process signature: {e}")
+        # Fall back to storing the data URL if upload fails
+        # This ensures we never lose the signature
+        return signature_data_url
 
 
 async def generate_tnm_number(db: AsyncSession, project_id: UUID) -> str:
@@ -124,6 +186,13 @@ async def create_tnm_ticket(
         submitter_email=ticket_data.submitter_email,
         submitter_id=UUID(current_user.sub) if current_user.sub else None,
         proposal_date=ticket_data.proposal_date,
+        due_date=ticket_data.due_date,
+        send_reminders_until_accepted=ticket_data.send_reminders_until_accepted,
+        send_reminders_until_paid=ticket_data.send_reminders_until_paid,
+        # Attachments
+        signature_url=ticket_data.signature_url,
+        photo_urls=ticket_data.photo_urls,
+        notes=ticket_data.notes,
         # Copy OH&P from project defaults
         labor_ohp_percent=project.labor_ohp_percent,
         material_ohp_percent=project.material_ohp_percent,
@@ -183,6 +252,57 @@ async def create_tnm_ticket(
 
     # Calculate totals with OH&P
     ticket.calculate_totals()
+
+    # Process signature and photos - convert base64 to MinIO storage
+    if ticket_data.signature_url:
+        ticket.signature_url = process_base64_signature(
+            ticket_data.signature_url,
+            ticket.id,
+            UUID(current_user.sub),
+            db
+        )
+
+    if ticket_data.photo_urls:
+        processed_photos = []
+        for photo_url in ticket_data.photo_urls:
+            if photo_url.startswith('data:'):
+                # Process base64 photo similar to signature
+                try:
+                    match = re.match(r'data:([^;]+);base64,(.+)', photo_url)
+                    if match:
+                        mime_type = match.group(1)
+                        base64_data = match.group(2)
+                        file_bytes = base64.b64decode(base64_data)
+                        file_size = len(file_bytes)
+                        ext = 'png' if 'png' in mime_type else 'jpg'
+                        filename = f"photo.{ext}"
+
+                        storage_key, _ = storage_service.upload_file(
+                            file_data=BytesIO(file_bytes),
+                            filename=filename,
+                            content_type=mime_type,
+                            folder=f"tnm-tickets/{ticket.id}/photos",
+                        )
+
+                        asset = Asset(
+                            tnm_ticket_id=ticket.id,
+                            filename=filename,
+                            mime_type=mime_type,
+                            file_size=file_size,
+                            storage_key=storage_key,
+                            asset_type='photo',
+                            uploaded_by=UUID(current_user.sub),
+                        )
+                        db.add(asset)
+                        processed_photos.append(f"/storage/{storage_key}")
+                    else:
+                        processed_photos.append(photo_url)
+                except Exception as e:
+                    logger.error(f"Failed to process photo: {e}")
+                    processed_photos.append(photo_url)  # Fallback to original
+            else:
+                processed_photos.append(photo_url)
+        ticket.photo_urls = processed_photos
 
     # Log creation
     await audit_service.log(
@@ -296,6 +416,58 @@ async def update_tnm_ticket(
     # Recalculate totals if OH&P changed
     if any(field.endswith('_ohp_percent') for field in update_data):
         ticket.calculate_totals()
+
+    # Process signature if it's a base64 data URL
+    if 'signature_url' in update_data and update_data['signature_url']:
+        if update_data['signature_url'].startswith('data:'):
+            ticket.signature_url = process_base64_signature(
+                update_data['signature_url'],
+                ticket.id,
+                UUID(current_user.sub),
+                db
+            )
+
+    # Process photos if they contain base64 data URLs
+    if 'photo_urls' in update_data and update_data['photo_urls']:
+        processed_photos = []
+        for photo_url in update_data['photo_urls']:
+            if photo_url.startswith('data:'):
+                try:
+                    match = re.match(r'data:([^;]+);base64,(.+)', photo_url)
+                    if match:
+                        mime_type = match.group(1)
+                        base64_data = match.group(2)
+                        file_bytes = base64.b64decode(base64_data)
+                        file_size = len(file_bytes)
+                        ext = 'png' if 'png' in mime_type else 'jpg'
+                        filename = f"photo.{ext}"
+
+                        storage_key, _ = storage_service.upload_file(
+                            file_data=BytesIO(file_bytes),
+                            filename=filename,
+                            content_type=mime_type,
+                            folder=f"tnm-tickets/{ticket.id}/photos",
+                        )
+
+                        asset = Asset(
+                            tnm_ticket_id=ticket.id,
+                            filename=filename,
+                            mime_type=mime_type,
+                            file_size=file_size,
+                            storage_key=storage_key,
+                            asset_type='photo',
+                            uploaded_by=UUID(current_user.sub),
+                        )
+                        db.add(asset)
+                        processed_photos.append(f"/storage/{storage_key}")
+                    else:
+                        processed_photos.append(photo_url)
+                except Exception as e:
+                    logger.error(f"Failed to process photo: {e}")
+                    processed_photos.append(photo_url)
+            else:
+                processed_photos.append(photo_url)
+        ticket.photo_urls = processed_photos
 
     # Log update
     await audit_service.log(
