@@ -174,7 +174,7 @@ class SettingsService:
             )
 
         # Add company info (always from global)
-        company_keys = ["COMPANY_NAME", "COMPANY_EMAIL", "COMPANY_PHONE", "TZ"]
+        company_keys = ["COMPANY_NAME", "COMPANY_EMAIL", "COMPANY_PHONE", "TZ", "COMPANY_LOGO_URL"]
         for key in company_keys:
             result[key] = await SettingsService.get_setting(key, db)
 
@@ -262,7 +262,7 @@ class SettingsService:
             return "ohp"
         elif key.startswith("REMINDER_"):
             return "reminders"
-        elif key == "APPROVAL_TOKEN_EXPIRATION_HOURS":
+        elif key.startswith("APPROVAL_") or key == "REQUIRE_GC_SIGNATURE_ON_APPROVAL":
             return "approval"
         elif key == "TZ":
             return "company"
@@ -276,7 +276,7 @@ class SettingsService:
             return SettingsService.OVERRIDABLE_SETTINGS[key]["type"]
         elif key in SettingsService.PROJECT_ONLY_SETTINGS:
             return SettingsService.PROJECT_ONLY_SETTINGS[key]["type"]
-        elif "ENABLED" in key or "USE_TLS" in key:
+        elif "ENABLED" in key or "USE_TLS" in key or "REQUIRE_" in key:
             return "boolean"
         elif "PORT" in key or "DAYS" in key or "RETRIES" in key or "HOURS" in key:
             return "integer"
@@ -310,6 +310,7 @@ class SettingsService:
             "REMINDER_INTERVAL_DAYS": "Days between reminder emails",
             "REMINDER_MAX_RETRIES": "Maximum number of reminder emails",
             "APPROVAL_TOKEN_EXPIRATION_HOURS": "Hours until approval link expires",
+            "REQUIRE_GC_SIGNATURE_ON_APPROVAL": "Require General Contractor signature on approval page",
         }
         return descriptions.get(key, "")
 

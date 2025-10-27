@@ -19,6 +19,7 @@ class TNMStatus(str, enum.Enum):
     approved = "approved"
     denied = "denied"
     cancelled = "cancelled"
+    paid = "paid"
 
 
 class TNMTicket(Base):
@@ -84,8 +85,11 @@ class TNMTicket(Base):
     approved_amount = Column(Numeric(12, 2), default=0.00)
 
     # Attachments
-    signature_url = Column(Text)
+    signature_url = Column(Text)  # Submitter/foreman signature
     photo_urls = Column(ARRAY(Text))
+
+    # Approval signature
+    gc_signature_url = Column(Text)  # GC approval signature
 
     # Email tracking
     email_sent_count = Column(Integer, default=0)

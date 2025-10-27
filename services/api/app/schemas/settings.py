@@ -85,6 +85,7 @@ class ReminderSettings(BaseModel):
 class ApprovalSettings(BaseModel):
     """Approval link settings"""
     token_expiration_hours: int = Field(..., ge=1, le=720)  # 1 hour to 30 days
+    require_gc_signature: bool = False
 
 
 class EffectiveSettings(BaseModel):

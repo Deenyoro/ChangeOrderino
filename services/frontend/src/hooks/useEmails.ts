@@ -21,6 +21,22 @@ export const useFailedEmailsStats = () => {
   });
 };
 
+export const useSentEmails = (params?: { limit?: number; offset?: number }) => {
+  return useQuery({
+    queryKey: ['sent-emails', params],
+    queryFn: () => emailsApi.getSentEmails(params),
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+};
+
+export const useSentEmailsStats = () => {
+  return useQuery({
+    queryKey: ['sent-emails-stats'],
+    queryFn: () => emailsApi.getSentEmailsStats(),
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+};
+
 export const useRecentReminders = (params?: { days?: number; limit?: number }) => {
   return useQuery({
     queryKey: ['recent-reminders', params],

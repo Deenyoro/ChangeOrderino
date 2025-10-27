@@ -394,8 +394,39 @@
     </div>
     {% endif %}
 
-    <!-- Signature Section -->
+    <!-- Signature Sections -->
     {% if pdf_show_signature_section %}
+
+    <!-- Initial Submitter Signature -->
+    {% if tnm_ticket.signature_url %}
+    <div class="signature-section">
+        <p><strong>Submitter Signature</strong></p>
+        <div style="margin-top: 20px;">
+            <img src="{{ tnm_ticket.signature_url }}" alt="Submitter Signature" style="max-width: 400px; max-height: 150px; border: 1px solid #ddd; padding: 10px; background: white;">
+            <div style="margin-top: 10px; font-size: 9pt; color: #666;">
+                Signed by: {{ tnm_ticket.submitter_name }}
+                {% if tnm_ticket.proposal_date %}on {{ tnm_ticket.proposal_date | date }}{% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- GC Approval Signature -->
+    {% if tnm_ticket.gc_signature_url %}
+    <div class="signature-section">
+        <p><strong>Email Approval Signature</strong></p>
+        <div style="margin-top: 20px;">
+            <img src="{{ tnm_ticket.gc_signature_url }}" alt="GC Approval Signature" style="max-width: 400px; max-height: 150px; border: 1px solid #ddd; padding: 10px; background: white;">
+            <div style="margin-top: 10px; font-size: 9pt; color: #666;">
+                Approved via email
+                {% if tnm_ticket.response_date %}on {{ tnm_ticket.response_date | date }}{% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Empty signature boxes if neither signature exists -->
+    {% if not tnm_ticket.signature_url and not tnm_ticket.gc_signature_url %}
     <div class="signature-section">
         <p><strong>{{ pdf_signature_title }}</strong></p>
         <div style="margin-top: 50px;">
@@ -407,6 +438,8 @@
             </div>
         </div>
     </div>
+    {% endif %}
+
     {% endif %}
 
     <!-- Footer -->

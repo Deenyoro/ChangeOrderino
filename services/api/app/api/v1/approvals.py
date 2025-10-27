@@ -1,5 +1,8 @@
 """Approval endpoints (for GC approval links)"""
 import logging
+import base64
+import re
+from io import BytesIO
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,11 +17,79 @@ from app.core.database import get_db
 from app.core.auth import verify_approval_token
 from app.models.tnm_ticket import TNMTicket, TNMStatus
 from app.models.approval import LineItemApproval, ApprovalStatus
+from app.models.asset import Asset
 from app.services.audit_service import audit_service
 from app.services.email_service import email_service
 from app.services.reminder_cancellation import cancel_reminders_for_ticket
+from app.services.storage import storage_service
+from app.services.settings_service import settings_service
 
 router = APIRouter()
+
+
+# ============ HELPER FUNCTIONS ============
+
+def process_approval_signature(signature_data_url: str, ticket_id: str, signature_type: str, db: AsyncSession) -> str:
+    """
+    Convert base64 data URL to actual file in MinIO for approval signatures
+
+    Args:
+        signature_data_url: Base64 data URL or existing URL
+        ticket_id: TNM ticket ID
+        signature_type: Type of signature ('gc' or 'owner')
+        db: Database session
+
+    Returns:
+        Public URL to the stored signature
+    """
+    if not signature_data_url or not signature_data_url.startswith('data:'):
+        # Not a data URL, return as-is (might already be a URL)
+        return signature_data_url
+
+    try:
+        # Parse data URL: data:image/png;base64,iVBORw0KG...
+        match = re.match(r'data:([^;]+);base64,(.+)', signature_data_url)
+        if not match:
+            logger.warning(f"Invalid data URL format for {signature_type} signature")
+            return signature_data_url
+
+        mime_type = match.group(1)
+        base64_data = match.group(2)
+
+        # Decode base64
+        file_bytes = base64.b64decode(base64_data)
+        file_size = len(file_bytes)
+
+        # Determine extension
+        ext = 'png' if 'png' in mime_type else 'jpg'
+        filename = f"{signature_type}_signature.{ext}"
+
+        # Upload to MinIO
+        storage_key, _ = storage_service.upload_file(
+            file_data=BytesIO(file_bytes),
+            filename=filename,
+            content_type=mime_type,
+            folder=f"tnm-tickets/{ticket_id}/approval_signatures",
+        )
+
+        # Create asset record (will be committed with ticket)
+        asset = Asset(
+            tnm_ticket_id=ticket_id,
+            filename=filename,
+            mime_type=mime_type,
+            file_size=file_size,
+            storage_key=storage_key,
+            asset_type=f'{signature_type}_signature',
+            uploaded_by=None,  # No user for GC approvals
+        )
+        db.add(asset)
+
+        # Return public URL
+        return f"/storage/{storage_key}"
+
+    except Exception as e:
+        logger.error(f"Failed to process {signature_type} signature: {str(e)}", exc_info=True)
+        return signature_data_url
 
 
 # ============ REQUEST SCHEMAS ============
@@ -231,6 +302,33 @@ async def submit_approval(
             status_code=400,
             detail="This RFCO has already been responded to"
         )
+
+    # Check if GC signature is required
+    require_gc_signature = await settings_service.get_setting(
+        "REQUIRE_GC_SIGNATURE_ON_APPROVAL",
+        db,
+        project_id=ticket.project_id
+    )
+
+    # Validate GC signature if required
+    if require_gc_signature and not approval.gc_signature:
+        raise HTTPException(
+            status_code=400,
+            detail="General Contractor signature is required"
+        )
+
+    # Process GC signature
+    if approval.gc_signature:
+        try:
+            ticket.gc_signature_url = process_approval_signature(
+                approval.gc_signature,
+                str(ticket.id),
+                'gc',
+                db
+            )
+            logger.info(f"Processed GC signature for ticket {ticket.id}")
+        except Exception as e:
+            logger.error(f"Failed to process GC signature: {str(e)}", exc_info=True)
 
     # Store old status for audit log
     old_status = ticket.status

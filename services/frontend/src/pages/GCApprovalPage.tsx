@@ -6,13 +6,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { CheckCircle, XCircle, FileText, Clock, MessageSquare, ThumbsUp } from 'lucide-react';
+import { CheckCircle, XCircle, FileText, Clock, MessageSquare, ThumbsUp, PenTool } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { approvalsApi } from '../api/approvals';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { formatDate, formatCurrency } from '../utils/formatters';
 import { TNMSummary } from '../components/tnm/TNMSummary';
 import { ApprovalStatus } from '../types/tnmTicket';
+import { SignaturePad, SignatureDisplay } from '../components/common/SignaturePad';
 
 export const GCApprovalPage: React.FC = () => {
   const { token } = useParams<{ token: string }>();
@@ -24,6 +25,7 @@ export const GCApprovalPage: React.FC = () => {
     gc_comment?: string;
   }>>([]);
   const [gcComment, setGcComment] = useState('');
+  const [gcSignature, setGcSignature] = useState<string>('');
   const [submitted, setSubmitted] = useState(false);
 
   const { data, isLoading, error } = useQuery({
@@ -112,9 +114,16 @@ export const GCApprovalPage: React.FC = () => {
       return;
     }
 
+    // Determine overall decision
+    const allApproved = lineItemApprovals.every(item => item.status === ApprovalStatus.APPROVED);
+    const allDenied = lineItemApprovals.every(item => item.status === ApprovalStatus.DENIED);
+    const decision = allApproved ? 'approve_all' : allDenied ? 'deny_all' : 'partial';
+
     await submitMutation.mutateAsync({
+      decision,
       line_item_approvals: lineItemApprovals,
       gc_comment: gcComment,
+      gc_signature: gcSignature || undefined,
     });
   };
 
@@ -126,7 +135,7 @@ export const GCApprovalPage: React.FC = () => {
     );
   }
 
-  if (error || !data) {
+  if (error || !data || !data.tnm_ticket) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="card max-w-md text-center">
@@ -626,8 +635,25 @@ export const GCApprovalPage: React.FC = () => {
               </p>
             </div>
 
+            {/* GC Signature Section */}
+            <div className="pt-6 border-t-2 border-gray-200">
+              <label className="flex items-center gap-2 text-base font-semibold text-gray-900 mb-3">
+                <PenTool className="w-5 h-5 text-blue-600" />
+                General Contractor Signature
+              </label>
+              {gcSignature ? (
+                <SignatureDisplay
+                  signature={gcSignature}
+                  onRemove={() => setGcSignature('')}
+                  label="GC Signature"
+                />
+              ) : (
+                <SignaturePad onSave={(dataUrl) => setGcSignature(dataUrl)} />
+              )}
+            </div>
+
             {/* Submit - Large Prominent Button */}
-            <div className="flex items-center justify-end gap-3 pt-6 border-t-2 border-gray-200">
+            <div className="flex items-center justify-end gap-3 pt-6">
               <button
                 type="button"
                 onClick={handleSubmit}

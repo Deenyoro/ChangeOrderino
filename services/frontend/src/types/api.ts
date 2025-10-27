@@ -35,6 +35,7 @@ export interface ApprovalPageData {
 }
 
 export interface ApprovalSubmission {
+  decision: string; // 'approve_all', 'deny_all', 'partial'
   line_item_approvals: Array<{
     line_item_type: string;
     line_item_id: string;
@@ -42,5 +43,7 @@ export interface ApprovalSubmission {
     approved_amount?: number;
     gc_comment?: string;
   }>;
+  gc_name?: string;
   gc_comment?: string;
+  gc_signature?: string;
 }

@@ -143,6 +143,7 @@ async def get_effective_settings(
             ),
             approval=ApprovalSettings(
                 token_expiration_hours=settings_dict.get("APPROVAL_TOKEN_EXPIRATION_HOURS", 168),
+                require_gc_signature=settings_dict.get("REQUIRE_GC_SIGNATURE_ON_APPROVAL", False),
             ),
         )
 
@@ -200,7 +201,8 @@ async def upload_company_logo(
 
         # Generate public URL using FRONTEND_URL
         # Use absolute URL so it works in emails
-        logo_url = f"{app_settings.FRONTEND_URL}/storage/{storage_service.bucket_name}/{storage_key}"
+        # nginx proxy already adds /changeorders/ to the path, so don't include bucket name
+        logo_url = f"{app_settings.FRONTEND_URL}/storage/{storage_key}"
 
         # Update COMPANY_LOGO_URL setting in database
         setting = await settings_service.update_global_setting(

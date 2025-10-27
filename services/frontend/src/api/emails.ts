@@ -23,6 +23,12 @@ export interface FailedEmailsStats {
   failed_last_7d: number;
 }
 
+export interface SuccessfulEmailsStats {
+  total_sent: number;
+  sent_last_24h: number;
+  sent_last_7d: number;
+}
+
 export const emailsApi = {
   /**
    * Get failed emails
@@ -37,6 +43,22 @@ export const emailsApi = {
    */
   getFailedEmailsStats: async (): Promise<FailedEmailsStats> => {
     const response = await apiClient.get('v1/emails/failed/stats');
+    return response.data;
+  },
+
+  /**
+   * Get sent emails
+   */
+  getSentEmails: async (params?: { limit?: number; offset?: number }): Promise<EmailLog[]> => {
+    const response = await apiClient.get('v1/emails/sent', { params });
+    return response.data;
+  },
+
+  /**
+   * Get sent emails statistics
+   */
+  getSentEmailsStats: async (): Promise<SuccessfulEmailsStats> => {
+    const response = await apiClient.get('v1/emails/sent/stats');
     return response.data;
   },
 

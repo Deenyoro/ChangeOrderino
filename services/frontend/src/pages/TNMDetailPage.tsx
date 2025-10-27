@@ -585,17 +585,52 @@ export const TNMDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Signature & Photos */}
-      {(ticket.signature_url || (ticket.photo_urls && ticket.photo_urls.length > 0)) && (
+      {/* Signatures & Photos */}
+      {(ticket.signature_url || ticket.gc_signature_url || (ticket.photo_urls && ticket.photo_urls.length > 0)) && (
         <div className="card mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Attachments</h3>
-          <div className="space-y-4">
-            {ticket.signature_url && (
-              <SignatureDisplay signature={ticket.signature_url} label="GC Signature" />
-            )}
-            {ticket.photo_urls && ticket.photo_urls.length > 0 && (
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Signatures & Attachments</h3>
+          <div className="space-y-6">
+            {/* Signatures Section */}
+            {(ticket.signature_url || ticket.gc_signature_url) && (
               <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Photos</h4>
+                <h4 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-blue-600" />
+                  Signatures
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Initial Signature */}
+                  {ticket.signature_url && (
+                    <div className="border-2 border-blue-200 rounded-lg p-4 bg-blue-50">
+                      <div className="text-sm font-semibold text-blue-900 mb-3">
+                        Signature from Ticket Creation
+                      </div>
+                      <SignatureDisplay
+                        signature={ticket.signature_url}
+                        label="Initial Signature"
+                      />
+                    </div>
+                  )}
+
+                  {/* GC Approval Signature */}
+                  {ticket.gc_signature_url && (
+                    <div className="border-2 border-green-200 rounded-lg p-4 bg-green-50">
+                      <div className="text-sm font-semibold text-green-900 mb-3">
+                        Email Approval Signature
+                      </div>
+                      <SignatureDisplay
+                        signature={ticket.gc_signature_url}
+                        label="Signature from Approval Email"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Photos Section */}
+            {ticket.photo_urls && ticket.photo_urls.length > 0 && (
+              <div className="pt-6 border-t border-gray-200">
+                <h4 className="text-sm font-medium text-gray-700 mb-3">Attached Photos</h4>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {ticket.photo_urls.map((url, index) => (
                     <img

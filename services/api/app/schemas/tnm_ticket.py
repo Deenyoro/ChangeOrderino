@@ -214,6 +214,7 @@ class TNMTicketResponse(TNMTicketBase):
 
     # Attachments
     signature_url: Optional[str] = None
+    gc_signature_url: Optional[str] = None
     photo_urls: Optional[List[str]] = None
     notes: Optional[str] = None
 
@@ -329,6 +330,9 @@ class TNMTicketEditRequest(BaseModel):
     rate_superintendent: Optional[Decimal] = Field(None, ge=0)
     rate_carpenter: Optional[Decimal] = Field(None, ge=0)
     rate_laborer: Optional[Decimal] = Field(None, ge=0)
+
+    # Signature (base64 data URL or existing URL)
+    signature_url: Optional[str] = None
 
     notes: Optional[str] = None
     edit_reason: Optional[str] = Field(None, max_length=500)

@@ -1,8 +1,30 @@
 """Helper functions for PDF generation"""
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Optional
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def convert_storage_url_to_minio_url(storage_url: Optional[str]) -> Optional[str]:
+    """
+    Convert /storage/... URL to absolute MinIO URL for PDF generation
+
+    Args:
+        storage_url: URL like /storage/tnm-tickets/xxx/signature/yyy.png
+
+    Returns:
+        Absolute MinIO URL like http://changeorderino-minio:9000/changeorders/tnm-tickets/xxx/signature/yyy.png
+    """
+    if not storage_url or not storage_url.startswith('/storage/'):
+        return storage_url
+
+    # Strip /storage/ prefix and prepend MinIO URL with bucket
+    path = storage_url.replace('/storage/', '')
+    minio_url = f"{settings.MINIO_SERVER_URL}/{settings.MINIO_BUCKET_NAME}/{path}"
+
+    logger.debug(f"Converted storage URL {storage_url} to MinIO URL {minio_url}")
+    return minio_url
 
 
 def prepare_ticket_data_for_pdf(ticket: Any) -> Dict[str, Any]:
@@ -21,9 +43,14 @@ def prepare_ticket_data_for_pdf(ticket: Any) -> Dict[str, Any]:
         'title': ticket.title,
         'description': ticket.description or '',
         'proposal_date': ticket.proposal_date,
+        'due_date': ticket.due_date,
         'submitter_name': ticket.submitter_name,
         'submitter_email': ticket.submitter_email,
         'notes': ticket.notes or '',
+        'signature_url': convert_storage_url_to_minio_url(ticket.signature_url) if ticket.signature_url else '',
+        'gc_signature_url': convert_storage_url_to_minio_url(ticket.gc_signature_url) if ticket.gc_signature_url else '',
+        'response_date': ticket.response_date,
+        'photo_urls': [convert_storage_url_to_minio_url(url) for url in (ticket.photo_urls or [])],
         # Labor items
         'labor_items': [
             {

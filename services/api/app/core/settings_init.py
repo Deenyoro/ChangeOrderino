@@ -206,6 +206,13 @@ async def initialize_settings_from_env(db: AsyncSession) -> None:
             "data_type": "integer",
             "description": "Hours until approval link expires"
         },
+        {
+            "key": "REQUIRE_GC_SIGNATURE_ON_APPROVAL",
+            "value": "false",
+            "category": "approval",
+            "data_type": "boolean",
+            "description": "Require General Contractor signature on approval page"
+        },
 
         # Email Template Settings - RFCO Send Email
         {

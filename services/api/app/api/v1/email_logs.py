@@ -4,11 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc
 from datetime import datetime, timedelta
+from uuid import UUID
 
 from app.core.database import get_db
 from app.core.auth import get_current_user, TokenData
 from app.models.email_log import EmailLog
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 router = APIRouter()
@@ -29,12 +30,27 @@ class EmailLogResponse(BaseModel):
 
     model_config = {'from_attributes': True}
 
+    @field_validator('id', 'tnm_ticket_id', mode='before')
+    @classmethod
+    def convert_uuid_to_str(cls, v):
+        """Convert UUID objects to strings"""
+        if isinstance(v, UUID):
+            return str(v)
+        return v
+
 
 class FailedEmailsStats(BaseModel):
     """Failed emails statistics"""
     total_failed: int
     failed_last_24h: int
     failed_last_7d: int
+
+
+class SuccessfulEmailsStats(BaseModel):
+    """Successful emails statistics"""
+    total_sent: int
+    sent_last_24h: int
+    sent_last_7d: int
 
 
 @router.get("/failed", response_model=List[EmailLogResponse])
@@ -96,6 +112,68 @@ async def get_failed_email_stats(
         total_failed=total_failed,
         failed_last_24h=failed_last_24h,
         failed_last_7d=failed_last_7d
+    )
+
+
+@router.get("/sent", response_model=List[EmailLogResponse])
+async def get_sent_emails(
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    current_user: TokenData = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get successfully sent email logs"""
+
+    query = (
+        select(EmailLog)
+        .where(EmailLog.status == 'sent')
+        .order_by(desc(EmailLog.sent_at))
+        .limit(limit)
+        .offset(offset)
+    )
+
+    result = await db.execute(query)
+    emails = result.scalars().all()
+
+    return emails
+
+
+@router.get("/sent/stats", response_model=SuccessfulEmailsStats)
+async def get_sent_email_stats(
+    current_user: TokenData = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get statistics about successfully sent emails"""
+
+    # Total sent
+    total_query = select(func.count(EmailLog.id)).where(EmailLog.status == 'sent')
+    total_result = await db.execute(total_query)
+    total_sent = total_result.scalar() or 0
+
+    # Sent in last 24 hours
+    yesterday = datetime.utcnow() - timedelta(days=1)
+    last_24h_query = (
+        select(func.count(EmailLog.id))
+        .where(EmailLog.status == 'sent')
+        .where(EmailLog.sent_at >= yesterday)
+    )
+    last_24h_result = await db.execute(last_24h_query)
+    sent_last_24h = last_24h_result.scalar() or 0
+
+    # Sent in last 7 days
+    last_week = datetime.utcnow() - timedelta(days=7)
+    last_7d_query = (
+        select(func.count(EmailLog.id))
+        .where(EmailLog.status == 'sent')
+        .where(EmailLog.sent_at >= last_week)
+    )
+    last_7d_result = await db.execute(last_7d_query)
+    sent_last_7d = last_7d_result.scalar() or 0
+
+    return SuccessfulEmailsStats(
+        total_sent=total_sent,
+        sent_last_24h=sent_last_24h,
+        sent_last_7d=sent_last_7d
     )
 
 

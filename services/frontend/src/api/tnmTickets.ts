@@ -162,6 +162,7 @@ export const tnmTicketsApi = {
       rate_superintendent?: number;
       rate_carpenter?: number;
       rate_laborer?: number;
+      signature_url?: string;
       notes?: string;
       edit_reason?: string;
     }

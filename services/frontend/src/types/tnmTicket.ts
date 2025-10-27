@@ -14,6 +14,7 @@ export enum TNMStatus {
   APPROVED = 'approved',
   DENIED = 'denied',
   CANCELLED = 'cancelled',
+  PAID = 'paid',
 }
 
 export enum ApprovalStatus {
@@ -79,7 +80,8 @@ export interface TNMTicket {
   approved_amount: number;
 
   // Attachments
-  signature_url?: string;
+  signature_url?: string;  // Foreman/submitter signature from ticket creation
+  gc_signature_url?: string;  // GC signature from approval page
   photo_urls?: string[];
 
   // Email tracking
