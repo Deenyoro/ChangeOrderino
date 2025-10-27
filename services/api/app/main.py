@@ -22,6 +22,7 @@ from app.api.v1 import (
     email_health,
     email_logs,
     settings as settings_router,
+    utils,
 )
 
 
@@ -98,6 +99,7 @@ app.include_router(dashboard.router, prefix="/v1/dashboard", tags=["Dashboard"])
 app.include_router(email_health.router, prefix="/v1", tags=["Email Service"])
 app.include_router(email_logs.router, prefix="/v1/emails", tags=["Email Logs"])
 app.include_router(settings_router.router, prefix="/v1", tags=["Settings"])
+app.include_router(utils.router, prefix="/v1/utils", tags=["Utilities"])
 
 
 # ============ ERROR HANDLERS ============

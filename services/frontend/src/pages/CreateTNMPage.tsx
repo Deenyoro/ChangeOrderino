@@ -124,17 +124,72 @@ export const CreateTNMPage: React.FC = () => {
 
   const proposalAmount = laborTotal + materialTotal + equipmentTotal + subcontractorTotal;
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotos(prev => [...prev, reader.result as string]);
-      };
-      reader.readAsDataURL(file);
-    });
+    const MAX_PHOTOS = 5;
+
+    for (const file of Array.from(files)) {
+      // Check if we've reached the limit
+      if (photos.length >= MAX_PHOTOS) {
+        alert(`Maximum of ${MAX_PHOTOS} images allowed. Additional files will be ignored.`);
+        break;
+      }
+
+      // Check if file is a PDF
+      if (file.type === 'application/pdf') {
+        try {
+          // Send PDF to backend for conversion
+          const formData = new FormData();
+          formData.append('file', file);
+
+          const response = await fetch('/api/v1/utils/convert-pdf', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            },
+            body: formData,
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to convert PDF');
+          }
+
+          const result = await response.json();
+
+          // Add converted images up to the limit
+          const remainingSlots = MAX_PHOTOS - photos.length;
+          const imagesToAdd = result.image_urls.slice(0, remainingSlots);
+
+          if (result.image_urls.length > remainingSlots) {
+            alert(`PDF has ${result.image_urls.length} pages, but only ${remainingSlots} slots remaining. Only first ${remainingSlots} pages will be added.`);
+          }
+
+          setPhotos(prev => [...prev, ...imagesToAdd]);
+        } catch (error) {
+          console.error('Error converting PDF:', error);
+          alert('Failed to convert PDF. Please try again.');
+        }
+      } else if (file.type.startsWith('image/')) {
+        // Handle image files normally
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPhotos(prev => {
+            if (prev.length >= MAX_PHOTOS) {
+              return prev;
+            }
+            return [...prev, reader.result as string];
+          });
+        };
+        reader.readAsDataURL(file);
+      } else {
+        alert('Only images and PDF files are allowed');
+      }
+    }
+
+    // Clear the file input so the same file can be selected again if needed
+    e.target.value = '';
   };
 
   const onSubmit = async (data: Partial<TNMTicketFormData>) => {
@@ -384,7 +439,12 @@ export const CreateTNMPage: React.FC = () => {
 
             {/* Photos */}
             <div>
-              <label className="label mb-2">Attach Photos (optional)</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="label mb-0">Attach Photos/PDFs (optional)</label>
+                <span className="text-sm text-gray-600">
+                  {photos.length} / 5 images
+                </span>
+              </div>
               <div className="space-y-3">
                 {photos.map((photo, index) => (
                   <div key={index} className="relative border border-gray-300 rounded-lg p-2">
@@ -399,17 +459,23 @@ export const CreateTNMPage: React.FC = () => {
                     </button>
                   </div>
                 ))}
-                <label className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer">
-                  <Camera className="w-4 h-4 mr-2" />
-                  Add Photo
-                  <input
-                    type="file"
-                    accept="image/*,application/pdf"
-                    multiple
-                    onChange={handlePhotoUpload}
-                    className="sr-only"
-                  />
-                </label>
+                {photos.length < 5 ? (
+                  <label className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer">
+                    <Camera className="w-4 h-4 mr-2" />
+                    Add Photo/PDF
+                    <input
+                      type="file"
+                      accept="image/*,application/pdf"
+                      multiple
+                      onChange={handlePhotoUpload}
+                      className="sr-only"
+                    />
+                  </label>
+                ) : (
+                  <div className="text-sm text-gray-500 italic">
+                    Maximum of 5 images reached
+                  </div>
+                )}
               </div>
             </div>
           </div>
