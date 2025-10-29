@@ -2,9 +2,9 @@
  * TNM Tickets list page
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, CheckSquare, DollarSign, XCircle, RotateCcw } from 'lucide-react';
+import { Plus, Search, CheckSquare, DollarSign, XCircle, RotateCcw, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { useTNMTickets } from '../hooks/useTNMTickets';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { StatusBadge } from '../components/common/StatusBadge';
@@ -15,18 +15,56 @@ import { TNMStatus } from '../types/tnmTicket';
 import { tnmTicketsApi } from '../api/tnmTickets';
 import { toast } from 'react-hot-toast';
 
+type SortField = 'tnm_number' | 'title' | 'project_number' | 'proposal_date' | 'due_date' | 'proposal_amount' | 'approved_amount' | 'response_date' | 'status';
+type SortDirection = 'asc' | 'desc';
+
 export const TNMTicketsPage: React.FC = () => {
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<TNMStatus | ''>('');
   const [dueDateFilter, setDueDateFilter] = useState<'all' | 'overdue' | 'upcoming'>('all');
-  const [sortBy, setSortBy] = useState<'date' | 'due_date' | 'amount'>('date');
+  const [sortField, setSortField] = useState<SortField>('proposal_date');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [selectedTickets, setSelectedTickets] = useState<Set<string>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchInput);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
   const { data: allTickets, isLoading, refetch } = useTNMTickets({
-    search: search || undefined,
+    search: debouncedSearch || undefined,
     status: statusFilter || undefined,
   });
+
+  // Handle column header click for sorting
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // New field, default to descending
+      setSortField(field);
+      setSortDirection('desc');
+    }
+  };
+
+  // Render sort icon for column header
+  const renderSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="w-4 h-4 ml-1 opacity-30" />;
+    }
+    return sortDirection === 'asc' ? (
+      <ArrowUp className="w-4 h-4 ml-1" />
+    ) : (
+      <ArrowDown className="w-4 h-4 ml-1" />
+    );
+  };
 
   // Filter and sort tickets
   const tickets = React.useMemo(() => {
@@ -57,23 +95,60 @@ export const TNMTicketsPage: React.FC = () => {
       });
     }
 
-    // Sort
-    if (sortBy === 'due_date') {
-      filtered.sort((a, b) => {
-        if (!a.due_date && !b.due_date) return 0;
-        if (!a.due_date) return 1;
-        if (!b.due_date) return -1;
-        return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
-      });
-    } else if (sortBy === 'amount') {
-      filtered.sort((a, b) => b.proposal_amount - a.proposal_amount);
-    } else {
-      // Default: sort by date (newest first)
-      filtered.sort((a, b) => new Date(b.proposal_date).getTime() - new Date(a.proposal_date).getTime());
-    }
+    // Sort by selected field and direction
+    filtered.sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortField) {
+        case 'tnm_number':
+          aValue = a.rfco_number || a.tnm_number;
+          bValue = b.rfco_number || b.tnm_number;
+          break;
+        case 'title':
+          aValue = a.title.toLowerCase();
+          bValue = b.title.toLowerCase();
+          break;
+        case 'project_number':
+          aValue = a.project_number.toLowerCase();
+          bValue = b.project_number.toLowerCase();
+          break;
+        case 'proposal_date':
+          aValue = new Date(a.proposal_date).getTime();
+          bValue = new Date(b.proposal_date).getTime();
+          break;
+        case 'due_date':
+          aValue = a.due_date ? new Date(a.due_date).getTime() : 0;
+          bValue = b.due_date ? new Date(b.due_date).getTime() : 0;
+          break;
+        case 'proposal_amount':
+          aValue = a.proposal_amount;
+          bValue = b.proposal_amount;
+          break;
+        case 'approved_amount':
+          aValue = a.approved_amount;
+          bValue = b.approved_amount;
+          break;
+        case 'response_date':
+          aValue = a.response_date ? new Date(a.response_date).getTime() : 0;
+          bValue = b.response_date ? new Date(b.response_date).getTime() : 0;
+          break;
+        case 'status':
+          aValue = a.status;
+          bValue = b.status;
+          break;
+        default:
+          aValue = 0;
+          bValue = 0;
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
 
     return filtered;
-  }, [allTickets, dueDateFilter, sortBy]);
+  }, [allTickets, dueDateFilter, sortField, sortDirection]);
 
   // Checkbox handlers
   const handleSelectAll = () => {
@@ -320,8 +395,8 @@ export const TNMTicketsPage: React.FC = () => {
                 <Input
                   type="text"
                   placeholder="Search TNM tickets..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
                   className="pl-10"
                 />
               </div>
@@ -376,18 +451,6 @@ export const TNMTicketsPage: React.FC = () => {
                 Due Within 7 Days
               </button>
             </div>
-            <div className="ml-auto">
-              <label className="text-sm font-medium text-gray-700 mr-2">Sort By:</label>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="input-field inline-block w-auto"
-              >
-                <option value="date">Proposal Date</option>
-                <option value="due_date">Due Date</option>
-                <option value="amount">Amount</option>
-              </select>
-            </div>
           </div>
         </div>
       </div>
@@ -407,28 +470,76 @@ export const TNMTicketsPage: React.FC = () => {
                   />
                 </th>
                 <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  RFCO / TNM #
+                  <button
+                    onClick={() => handleSort('tnm_number')}
+                    className="flex items-center hover:text-gray-700 transition-colors"
+                  >
+                    RFCO / TNM #
+                    {renderSortIcon('tnm_number')}
+                  </button>
                 </th>
                 <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Title
+                  <button
+                    onClick={() => handleSort('title')}
+                    className="flex items-center hover:text-gray-700 transition-colors"
+                  >
+                    Title
+                    {renderSortIcon('title')}
+                  </button>
                 </th>
                 <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Project
+                  <button
+                    onClick={() => handleSort('project_number')}
+                    className="flex items-center hover:text-gray-700 transition-colors"
+                  >
+                    Project
+                    {renderSortIcon('project_number')}
+                  </button>
                 </th>
                 <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Proposal Date
+                  <button
+                    onClick={() => handleSort('proposal_date')}
+                    className="flex items-center hover:text-gray-700 transition-colors"
+                  >
+                    Proposal Date
+                    {renderSortIcon('proposal_date')}
+                  </button>
                 </th>
                 <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Due Date
+                  <button
+                    onClick={() => handleSort('due_date')}
+                    className="flex items-center hover:text-gray-700 transition-colors"
+                  >
+                    Due Date
+                    {renderSortIcon('due_date')}
+                  </button>
                 </th>
                 <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Proposal Amount
+                  <button
+                    onClick={() => handleSort('proposal_amount')}
+                    className="flex items-center hover:text-gray-700 transition-colors ml-auto"
+                  >
+                    Proposal Amount
+                    {renderSortIcon('proposal_amount')}
+                  </button>
                 </th>
                 <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Approved Amount
+                  <button
+                    onClick={() => handleSort('approved_amount')}
+                    className="flex items-center hover:text-gray-700 transition-colors ml-auto"
+                  >
+                    Approved Amount
+                    {renderSortIcon('approved_amount')}
+                  </button>
                 </th>
                 <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Response Date
+                  <button
+                    onClick={() => handleSort('response_date')}
+                    className="flex items-center hover:text-gray-700 transition-colors"
+                  >
+                    Response Date
+                    {renderSortIcon('response_date')}
+                  </button>
                 </th>
                 <th className="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Reminders
@@ -437,7 +548,13 @@ export const TNMTicketsPage: React.FC = () => {
                   Last Reminder
                 </th>
                 <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                  <button
+                    onClick={() => handleSort('status')}
+                    className="flex items-center hover:text-gray-700 transition-colors"
+                  >
+                    Status
+                    {renderSortIcon('status')}
+                  </button>
                 </th>
               </tr>
             </thead>
