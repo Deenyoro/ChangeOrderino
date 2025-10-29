@@ -193,6 +193,7 @@ class TNMTicketResponse(TNMTicketBase):
     # Calculated totals
     labor_subtotal: Decimal
     labor_total: Decimal
+    total_labor_hours: Decimal
 
     material_subtotal: Decimal
     material_total: Decimal

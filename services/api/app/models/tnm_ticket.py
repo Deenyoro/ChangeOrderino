@@ -71,6 +71,7 @@ class TNMTicket(Base):
     # Calculated totals
     labor_subtotal = Column(Numeric(12, 2), default=0.00)
     labor_total = Column(Numeric(12, 2), default=0.00)
+    total_labor_hours = Column(Numeric(10, 2), default=0.00)
 
     material_subtotal = Column(Numeric(12, 2), default=0.00)
     material_total = Column(Numeric(12, 2), default=0.00)

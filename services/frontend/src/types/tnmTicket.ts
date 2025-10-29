@@ -57,6 +57,7 @@ export interface TNMTicket {
   labor_subtotal: number;
   labor_ohp_percent: number;
   labor_total: number;
+  total_labor_hours: number;
 
   material_subtotal: number;
   material_ohp_percent: number;

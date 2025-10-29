@@ -58,6 +58,17 @@ function App() {
 
   useEffect(() => {
     const initAuth = async () => {
+      // Check if current path is a public route (no auth required)
+      const currentPath = window.location.pathname;
+      const isPublicRoute = currentPath.startsWith('/approve/');
+
+      // Skip auth initialization for public routes
+      if (isPublicRoute) {
+        console.log('🔓 Public route detected, skipping authentication');
+        setIsAuthReady(true);
+        return;
+      }
+
       if (!authEnabled) {
         // Mock user for development without auth
         store.dispatch(setUser({

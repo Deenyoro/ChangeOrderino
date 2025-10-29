@@ -14,12 +14,14 @@ interface SubcontractorItemTableProps {
   items: SubcontractorItem[];
   onChange: (items: SubcontractorItem[]) => void;
   readonly?: boolean;
+  hidePrices?: boolean;
 }
 
 export const SubcontractorItemTable: React.FC<SubcontractorItemTableProps> = ({
   items,
   onChange,
   readonly = false,
+  hidePrices = false,
 }) => {
   const addItem = () => {
     const newItem: SubcontractorItem = {
@@ -80,9 +82,11 @@ export const SubcontractorItemTable: React.FC<SubcontractorItemTableProps> = ({
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase w-32">
                   Proposal Date
                 </th>
-                <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase w-32">
-                  Amount
-                </th>
+                {!hidePrices && (
+                  <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase w-32">
+                    Amount
+                  </th>
+                )}
                 {!readonly && <th className="px-3 py-3 w-12"></th>}
               </tr>
             </thead>
@@ -125,22 +129,24 @@ export const SubcontractorItemTable: React.FC<SubcontractorItemTableProps> = ({
                       />
                     )}
                   </td>
-                  <td className="px-3 py-2">
-                    {readonly ? (
-                      <div className="text-sm font-semibold text-gray-900 text-right">
-                        {formatCurrency(item.amount)}
-                      </div>
-                    ) : (
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={item.amount}
-                        onChange={(e) => updateItem(index, { amount: parseFloat(e.target.value) || 0 })}
-                        className="min-h-[44px]"
-                      />
-                    )}
-                  </td>
+                  {!hidePrices && (
+                    <td className="px-3 py-2">
+                      {readonly ? (
+                        <div className="text-sm font-semibold text-gray-900 text-right">
+                          {formatCurrency(item.amount)}
+                        </div>
+                      ) : (
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={item.amount}
+                          onChange={(e) => updateItem(index, { amount: parseFloat(e.target.value) || 0 })}
+                          className="min-h-[44px]"
+                        />
+                      )}
+                    </td>
+                  )}
                   {!readonly && (
                     <td className="px-3 py-2">
                       <button
@@ -155,17 +161,19 @@ export const SubcontractorItemTable: React.FC<SubcontractorItemTableProps> = ({
                 </tr>
               ))}
             </tbody>
-            <tfoot className="bg-gray-50">
-              <tr>
-                <td colSpan={3} className="px-3 py-3 text-right font-semibold text-gray-900">
-                  Subcontractor Subtotal:
-                </td>
-                <td className="px-3 py-3 text-right font-bold text-gray-900">
-                  {formatCurrency(total)}
-                </td>
-                {!readonly && <td></td>}
-              </tr>
-            </tfoot>
+            {!hidePrices && (
+              <tfoot className="bg-gray-50">
+                <tr>
+                  <td colSpan={3} className="px-3 py-3 text-right font-semibold text-gray-900">
+                    Subcontractor Subtotal:
+                  </td>
+                  <td className="px-3 py-3 text-right font-bold text-gray-900">
+                    {formatCurrency(total)}
+                  </td>
+                  {!readonly && <td></td>}
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       )}

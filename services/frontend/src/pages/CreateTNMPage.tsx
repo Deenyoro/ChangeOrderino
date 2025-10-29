@@ -4,11 +4,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, useParams, Link } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import { ArrowLeft, Camera, FileText, AlertCircle } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { useProjects } from '../hooks/useProjects';
 import { useCreateTNMTicket, useTNMTicket, useUpdateTNMTicket } from '../hooks/useTNMTickets';
 import { useAuth } from '../hooks/useAuth';
+import { AppDispatch, RootState } from '../store';
+import { fetchGlobalSettings } from '../store/slices/settingsSlice';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Select } from '../components/common/Select';
@@ -32,6 +35,7 @@ import {
 
 export const CreateTNMPage: React.FC = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const projectIdParam = searchParams.get('project_id');
@@ -43,6 +47,10 @@ export const CreateTNMPage: React.FC = () => {
   const { data: existingTicket, isLoading: ticketLoading } = useTNMTicket(id || '');
   const createMutation = useCreateTNMTicket();
   const updateMutation = useUpdateTNMTicket();
+
+  // Get settings from Redux store
+  const { globalSettings } = useSelector((state: RootState) => state.settings);
+  const hidePricesOnCreation = globalSettings.find(s => s.key === 'HIDE_PRICES_ON_TNM_CREATION')?.value?.toLowerCase() === 'true' || false;
 
   const [laborItems, setLaborItems] = useState<LaborItem[]>([]);
   const [materialItems, setMaterialItems] = useState<MaterialItem[]>([]);
@@ -68,6 +76,11 @@ export const CreateTNMPage: React.FC = () => {
       proposal_date: formatDateForInput(new Date()),
     },
   });
+
+  // Fetch settings on mount
+  useEffect(() => {
+    dispatch(fetchGlobalSettings()); // Fetch all settings for TNM creation
+  }, [dispatch]);
 
   // Auto-select project if passed in URL
   useEffect(() => {
@@ -381,19 +394,35 @@ export const CreateTNMPage: React.FC = () => {
         {/* Line Items */}
         <div className="space-y-6">
           <div className="card-section">
-            <LaborItemTable items={laborItems} onChange={setLaborItems} />
+            <LaborItemTable
+              items={laborItems}
+              onChange={setLaborItems}
+              hidePrices={!isEditMode && hidePricesOnCreation}
+            />
           </div>
 
           <div className="card-section">
-            <MaterialItemTable items={materialItems} onChange={setMaterialItems} />
+            <MaterialItemTable
+              items={materialItems}
+              onChange={setMaterialItems}
+              hidePrices={!isEditMode && hidePricesOnCreation}
+            />
           </div>
 
           <div className="card-section">
-            <EquipmentItemTable items={equipmentItems} onChange={setEquipmentItems} />
+            <EquipmentItemTable
+              items={equipmentItems}
+              onChange={setEquipmentItems}
+              hidePrices={!isEditMode && hidePricesOnCreation}
+            />
           </div>
 
           <div className="card-section">
-            <SubcontractorItemTable items={subcontractorItems} onChange={setSubcontractorItems} />
+            <SubcontractorItemTable
+              items={subcontractorItems}
+              onChange={setSubcontractorItems}
+              hidePrices={!isEditMode && hidePricesOnCreation}
+            />
           </div>
         </div>
 
@@ -501,6 +530,7 @@ export const CreateTNMPage: React.FC = () => {
           proposalAmount={proposalAmount}
           onSubmitForReview={handleSubmit(onSubmit)}
           isSaving={isSubmitting}
+          hidePrices={!isEditMode && hidePricesOnCreation}
         />
       )}
     </div>

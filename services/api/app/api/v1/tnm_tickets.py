@@ -207,6 +207,7 @@ async def create_tnm_ticket(
 
     # Add labor items
     labor_subtotal = Decimal('0')
+    total_labor_hours = Decimal('0')
     for item_data in ticket_data.labor_items:
         # Get rate from settings based on labor type
         rate = settings.get_labor_rate(item_data.labor_type)
@@ -217,8 +218,10 @@ async def create_tnm_ticket(
         )
         db.add(item)
         labor_subtotal += Decimal(str(item_data.hours)) * Decimal(str(rate))
+        total_labor_hours += Decimal(str(item_data.hours))
 
     ticket.labor_subtotal = labor_subtotal
+    ticket.total_labor_hours = total_labor_hours
 
     # Add material items
     material_subtotal = sum(

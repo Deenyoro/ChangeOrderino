@@ -15,6 +15,7 @@ interface LaborItemTableProps {
   items: LaborItem[];
   onChange: (items: LaborItem[]) => void;
   readonly?: boolean;
+  hidePrices?: boolean;
 }
 
 // Labor rates mapping (matches backend rates)
@@ -32,10 +33,18 @@ const LABOR_TYPE_OPTIONS = [
   { value: LaborType.LABORER, label: 'Laborer ($57/hr)' },
 ];
 
+const LABOR_TYPE_OPTIONS_NO_PRICE = [
+  { value: LaborType.PROJECT_MANAGER, label: 'Project Manager' },
+  { value: LaborType.SUPERINTENDENT, label: 'Superintendent' },
+  { value: LaborType.CARPENTER, label: 'Carpenter' },
+  { value: LaborType.LABORER, label: 'Laborer' },
+];
+
 export const LaborItemTable: React.FC<LaborItemTableProps> = ({
   items,
   onChange,
   readonly = false,
+  hidePrices = false,
 }) => {
   const addItem = () => {
     const newItem: LaborItem = {
@@ -78,6 +87,8 @@ export const LaborItemTable: React.FC<LaborItemTableProps> = ({
     return sum + (item.subtotal || calculateLaborSubtotal(item.hours, item.rate_per_hour));
   }, 0);
 
+  const totalHours = items.reduce((sum, item) => sum + (item.hours || 0), 0);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -115,12 +126,16 @@ export const LaborItemTable: React.FC<LaborItemTableProps> = ({
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase w-48">
                     Type
                   </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase w-32">
-                    Rate
-                  </th>
-                  <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase w-32">
-                    Subtotal
-                  </th>
+                  {!hidePrices && (
+                    <>
+                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase w-32">
+                        Rate
+                      </th>
+                      <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase w-32">
+                        Subtotal
+                      </th>
+                    </>
+                  )}
                   {!readonly && (
                     <th className="px-3 py-3 w-12"></th>
                   )}
@@ -158,27 +173,31 @@ export const LaborItemTable: React.FC<LaborItemTableProps> = ({
                     <td className="px-3 py-2">
                       {readonly ? (
                         <div className="text-sm text-gray-900">
-                          {LABOR_TYPE_OPTIONS.find(o => o.value === item.labor_type)?.label}
+                          {(hidePrices ? LABOR_TYPE_OPTIONS_NO_PRICE : LABOR_TYPE_OPTIONS).find(o => o.value === item.labor_type)?.label}
                         </div>
                       ) : (
                         <Select
                           value={item.labor_type}
                           onChange={(e) => updateItem(index, { labor_type: e.target.value as LaborType })}
-                          options={LABOR_TYPE_OPTIONS}
+                          options={hidePrices ? LABOR_TYPE_OPTIONS_NO_PRICE : LABOR_TYPE_OPTIONS}
                           className="min-h-[44px]"
                         />
                       )}
                     </td>
-                    <td className="px-3 py-2">
-                      <div className="text-sm font-medium text-gray-900">
-                        {formatCurrency(item.rate_per_hour)}
-                      </div>
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <div className="text-sm font-semibold text-gray-900">
-                        {formatCurrency(item.subtotal || calculateLaborSubtotal(item.hours, item.rate_per_hour))}
-                      </div>
-                    </td>
+                    {!hidePrices && (
+                      <>
+                        <td className="px-3 py-2">
+                          <div className="text-sm font-medium text-gray-900">
+                            {formatCurrency(item.rate_per_hour)}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          <div className="text-sm font-semibold text-gray-900">
+                            {formatCurrency(item.subtotal || calculateLaborSubtotal(item.hours, item.rate_per_hour))}
+                          </div>
+                        </td>
+                      </>
+                    )}
                     {!readonly && (
                       <td className="px-3 py-2">
                         <button
@@ -195,12 +214,13 @@ export const LaborItemTable: React.FC<LaborItemTableProps> = ({
               </tbody>
               <tfoot className="bg-gray-50">
                 <tr>
-                  <td colSpan={4} className="px-3 py-3 text-right font-semibold text-gray-900">
-                    Labor Subtotal:
+                  <td colSpan={hidePrices ? 2 : 4} className="px-3 py-3 text-right font-semibold text-gray-900">
+                    {hidePrices ? 'Total Hours:' : 'Labor Subtotal:'}
                   </td>
                   <td className="px-3 py-3 text-right font-bold text-gray-900">
-                    {formatCurrency(total)}
+                    {hidePrices ? `${formatNumber(totalHours)} hrs` : formatCurrency(total)}
                   </td>
+                  {!hidePrices && <td></td>}
                   {!readonly && <td></td>}
                 </tr>
               </tfoot>

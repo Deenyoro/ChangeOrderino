@@ -251,6 +251,7 @@
             </tbody>
         </table>
         <div class="totals-summary">
+            <p><strong>Total Labor Hours:</strong> {{ tnm_ticket.total_labor_hours }} hrs</p>
             <p><strong>Labor Subtotal:</strong> {{ tnm_ticket.labor_subtotal | currency }}</p>
             <p><strong>OH&P ({{ tnm_ticket.labor_ohp_percent }}%):</strong>
             {{ (tnm_ticket.labor_total - tnm_ticket.labor_subtotal) | currency }}</p>

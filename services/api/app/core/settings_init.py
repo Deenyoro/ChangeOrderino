@@ -384,6 +384,15 @@ async def initialize_settings_from_env(db: AsyncSession) -> None:
             "data_type": "boolean",
             "description": "Show company name and email in PDF footer"
         },
+
+        # TNM Ticket Settings
+        {
+            "key": "HIDE_PRICES_ON_TNM_CREATION",
+            "value": "false",
+            "category": "tnm",
+            "data_type": "boolean",
+            "description": "Hide price/rate fields when creating TNM tickets (prices set by approver)"
+        },
     ]
 
     # Insert all settings

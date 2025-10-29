@@ -10,6 +10,8 @@ from sqlalchemy.orm import selectinload
 from datetime import datetime, timezone
 from typing import List, Optional
 from pydantic import BaseModel
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +27,9 @@ from app.services.storage import storage_service
 from app.services.settings_service import settings_service
 
 router = APIRouter()
+
+# Rate limiter for approval endpoints
+limiter = Limiter(key_func=get_remote_address)
 
 
 # ============ HELPER FUNCTIONS ============
@@ -113,6 +118,7 @@ class ApprovalSubmitRequest(BaseModel):
 # ============ ENDPOINTS ============
 
 @router.get("/{token}/")
+@limiter.limit("10/minute")  # Max 10 verification attempts per minute per IP
 async def verify_approval_link(
     token: str,
     request: Request,
@@ -122,12 +128,14 @@ async def verify_approval_link(
     Verify approval token and return TNM ticket for GC review
 
     Public endpoint - no auth required
+    Rate limited to 10 requests per minute per IP to prevent token brute-forcing
     """
     try:
-        # Verify token and get ticket ID
+        # Step 1: Verify JWT signature and decode token
         tnm_ticket_id = verify_approval_token(token)
+        logger.info(f"Token decoded successfully for ticket {tnm_ticket_id}")
 
-        # Fetch ticket with all details
+        # Step 2: Fetch ticket with all details
         result = await db.execute(
             select(TNMTicket)
             .where(TNMTicket.id == tnm_ticket_id)
@@ -143,11 +151,18 @@ async def verify_approval_link(
         ticket = result.scalar_one_or_none()
 
         if not ticket:
+            logger.warning(f"Token valid but ticket {tnm_ticket_id} not found in database")
             raise HTTPException(status_code=404, detail="TNM ticket not found")
 
-        # Check if token matches
+        # Step 3: CRITICAL SECURITY CHECK - Verify token matches database
+        # This prevents token replay attacks if database token was invalidated
         if ticket.approval_token != token:
-            raise HTTPException(status_code=400, detail="Invalid token")
+            logger.warning(
+                f"Token mismatch for ticket {tnm_ticket_id}. "
+                f"Token may have been invalidated or this is a replay attack. "
+                f"IP: {request.client.host if request.client else 'unknown'}"
+            )
+            raise HTTPException(status_code=400, detail="Invalid or revoked token")
 
         # Check if expired
         if ticket.approval_token_expires_at < datetime.now(timezone.utc):
@@ -262,6 +277,7 @@ async def verify_approval_link(
 
 
 @router.post("/{token}/submit/")
+@limiter.limit("3/minute")  # Max 3 submission attempts per minute per IP
 async def submit_approval(
     token: str,
     approval: ApprovalSubmitRequest,
@@ -272,11 +288,13 @@ async def submit_approval(
     Submit GC approval/denial for TNM ticket
 
     Public endpoint - no auth required
+    Rate limited to 3 requests per minute per IP to prevent abuse
     """
-    # Verify token
+    # Step 1: Verify JWT signature and decode token
     tnm_ticket_id = verify_approval_token(token)
+    logger.info(f"Approval submission token decoded for ticket {tnm_ticket_id}")
 
-    # Fetch ticket
+    # Step 2: Fetch ticket
     result = await db.execute(
         select(TNMTicket)
         .where(TNMTicket.id == tnm_ticket_id)
@@ -290,11 +308,18 @@ async def submit_approval(
     ticket = result.scalar_one_or_none()
 
     if not ticket:
+        logger.warning(f"Submission attempt for non-existent ticket {tnm_ticket_id}")
         raise HTTPException(status_code=404, detail="TNM ticket not found")
 
-    # Verify token matches
+    # Step 3: CRITICAL SECURITY CHECK - Verify token matches database
+    # This prevents token replay attacks even if JWT is valid
     if ticket.approval_token != token:
-        raise HTTPException(status_code=400, detail="Invalid token")
+        logger.warning(
+            f"Token mismatch on submission for ticket {tnm_ticket_id}. "
+            f"Possible replay attack or token already used. "
+            f"IP: {request.client.host if request.client else 'unknown'}"
+        )
+        raise HTTPException(status_code=400, detail="Invalid or revoked token")
 
     # Check if already responded
     if ticket.status in [TNMStatus.approved, TNMStatus.denied, TNMStatus.partially_approved]:

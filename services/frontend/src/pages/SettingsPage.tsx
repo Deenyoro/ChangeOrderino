@@ -402,6 +402,12 @@ const SettingsPage: React.FC = () => {
         'Customize the appearance of generated PDF documents. Use variables like {company_name}, {company_email}, {company_phone}.'
       )}
 
+      {renderCategory(
+        'TNM Ticket Settings',
+        'tnm',
+        'Configure TNM (Time & Material) ticket creation and approval workflow.'
+      )}
+
       {/* Info Box */}
       <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
         <h3 className="text-lg font-semibold text-blue-900 mb-2">Settings Hierarchy</h3>

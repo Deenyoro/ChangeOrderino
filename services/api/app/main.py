@@ -2,14 +2,17 @@
 ChangeOrderino API - Main FastAPI Application
 """
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from app.core.config import settings
 from app.core.database import init_db, close_db, AsyncSessionLocal
 from app.core.settings_init import initialize_settings_from_env
+from app.middleware.security import SecurityHeadersMiddleware, limiter, rate_limit_handler
 from app.api.v1 import (
     projects,
     tnm_tickets,
@@ -69,7 +72,13 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Attach rate limiter to app state
+app.state.limiter = limiter
+
 # ============ MIDDLEWARE ============
+
+# Security headers (add FIRST for all responses)
+app.add_middleware(SecurityHeadersMiddleware)
 
 # CORS
 app.add_middleware(
@@ -82,6 +91,9 @@ app.add_middleware(
 
 # GZip compression
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# Rate limit exception handler
+app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 
 # ============ ROUTES ============
 

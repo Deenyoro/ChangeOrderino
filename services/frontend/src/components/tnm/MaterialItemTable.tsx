@@ -14,12 +14,14 @@ interface MaterialItemTableProps {
   items: MaterialItem[];
   onChange: (items: MaterialItem[]) => void;
   readonly?: boolean;
+  hidePrices?: boolean;
 }
 
 export const MaterialItemTable: React.FC<MaterialItemTableProps> = ({
   items,
   onChange,
   readonly = false,
+  hidePrices = false,
 }) => {
   const addItem = () => {
     const newItem: MaterialItem = {
@@ -92,12 +94,16 @@ export const MaterialItemTable: React.FC<MaterialItemTableProps> = ({
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase w-32">
                   Unit
                 </th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase w-32">
-                  Unit Price
-                </th>
-                <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase w-32">
-                  Subtotal
-                </th>
+                {!hidePrices && (
+                  <>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase w-32">
+                      Unit Price
+                    </th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase w-32">
+                      Subtotal
+                    </th>
+                  </>
+                )}
                 {!readonly && <th className="px-3 py-3 w-12"></th>}
               </tr>
             </thead>
@@ -142,25 +148,29 @@ export const MaterialItemTable: React.FC<MaterialItemTableProps> = ({
                       />
                     )}
                   </td>
-                  <td className="px-3 py-2">
-                    {readonly ? (
-                      <div className="text-sm text-gray-900">{formatCurrency(item.unit_price)}</div>
-                    ) : (
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={item.unit_price}
-                        onChange={(e) => updateItem(index, { unit_price: parseFloat(e.target.value) || 0 })}
-                        className="min-h-[44px]"
-                      />
-                    )}
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    <div className="text-sm font-semibold text-gray-900">
-                      {formatCurrency(item.subtotal || calculateItemSubtotal(item.quantity, item.unit_price))}
-                    </div>
-                  </td>
+                  {!hidePrices && (
+                    <>
+                      <td className="px-3 py-2">
+                        {readonly ? (
+                          <div className="text-sm text-gray-900">{formatCurrency(item.unit_price)}</div>
+                        ) : (
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={item.unit_price}
+                            onChange={(e) => updateItem(index, { unit_price: parseFloat(e.target.value) || 0 })}
+                            className="min-h-[44px]"
+                          />
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <div className="text-sm font-semibold text-gray-900">
+                          {formatCurrency(item.subtotal || calculateItemSubtotal(item.quantity, item.unit_price))}
+                        </div>
+                      </td>
+                    </>
+                  )}
                   {!readonly && (
                     <td className="px-3 py-2">
                       <button
@@ -175,17 +185,19 @@ export const MaterialItemTable: React.FC<MaterialItemTableProps> = ({
                 </tr>
               ))}
             </tbody>
-            <tfoot className="bg-gray-50">
-              <tr>
-                <td colSpan={4} className="px-3 py-3 text-right font-semibold text-gray-900">
-                  Material Subtotal:
-                </td>
-                <td className="px-3 py-3 text-right font-bold text-gray-900">
-                  {formatCurrency(total)}
-                </td>
-                {!readonly && <td></td>}
-              </tr>
-            </tfoot>
+            {!hidePrices && (
+              <tfoot className="bg-gray-50">
+                <tr>
+                  <td colSpan={4} className="px-3 py-3 text-right font-semibold text-gray-900">
+                    Material Subtotal:
+                  </td>
+                  <td className="px-3 py-3 text-right font-bold text-gray-900">
+                    {formatCurrency(total)}
+                  </td>
+                  {!readonly && <td></td>}
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       )}

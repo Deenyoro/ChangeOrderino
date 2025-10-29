@@ -53,9 +53,13 @@ async def recalculate_ticket_totals(db: AsyncSession, ticket_id: UUID):
     if not ticket:
         raise HTTPException(status_code=404, detail="TNM ticket not found")
 
-    # Calculate labor subtotal
+    # Calculate labor subtotal and total hours
     ticket.labor_subtotal = sum(
         float(item.hours) * float(item.rate_per_hour)
+        for item in ticket.labor_items
+    )
+    ticket.total_labor_hours = sum(
+        float(item.hours)
         for item in ticket.labor_items
     )
 
