@@ -312,35 +312,13 @@ async def get_current_user_synced(
     """
     FastAPI dependency to get current authenticated user and sync to database
     This ensures all authenticated users exist in the local users table for audit logging
-
-    IMPORTANT: Database roles ALWAYS override Keycloak token roles for simplicity
     Usage: user: TokenData = Depends(get_current_user_synced)
     """
-    from uuid import UUID
-    from sqlalchemy import select
-    from app.models.user import User
-
     # Get token data
     token_data = await get_current_user(credentials)
 
     # Sync to database
     await sync_user_to_db(token_data, db)
-
-    # OVERRIDE: Get user from database and use their role instead of Keycloak role
-    # This makes role management simple - just update the database!
-    try:
-        user_id = UUID(token_data.sub)
-        result = await db.execute(
-            select(User).where((User.id == user_id) | (User.keycloak_id == token_data.sub))
-        )
-        user = result.scalar_one_or_none()
-
-        if user:
-            # Override token roles with database role
-            token_data.roles = [user.role.value]
-    except Exception:
-        # If anything fails, just use the token roles as fallback
-        pass
 
     return token_data
 
