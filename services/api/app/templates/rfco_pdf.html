@@ -450,16 +450,16 @@
 
         <!-- Attached Photos -->
         {% if tnm_ticket.photo_urls and tnm_ticket.photo_urls | length > 0 %}
-        <div {% if pdf_show_signature_section %}style="border-top: 1px solid #e5e7eb; padding-top: 20px;"{% endif %}>
+        <div {% if pdf_show_signature_section %}style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 20px;"{% endif %}>
             <h4 style="font-weight: bold; margin-bottom: 15px; color: #333;">Attached Photos</h4>
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; page-break-inside: avoid;">
-                {% for photo_url in tnm_ticket.photo_urls %}
+            {% for photo_url in tnm_ticket.photo_urls %}
+            <div style="page-break-inside: avoid; margin-bottom: 30px; page-break-before: always;">
                 <div style="text-align: center;">
-                    <img src="{{ photo_url }}" alt="Attached Photo {{ loop.index }}" style="max-width: 100%; max-height: 350px; border: 1px solid #ddd; border-radius: 4px;">
-                    <div style="font-size: 8pt; color: #666; margin-top: 5px;">Photo {{ loop.index }}</div>
+                    <img src="{{ photo_url }}" alt="Attached Photo {{ loop.index }}" style="max-width: 100%; height: auto;">
+                    <div style="font-size: 9pt; color: #666; margin-top: 8px; font-weight: 500;">Photo {{ loop.index }}</div>
                 </div>
-                {% endfor %}
             </div>
+            {% endfor %}
         </div>
         {% endif %}
     </div>

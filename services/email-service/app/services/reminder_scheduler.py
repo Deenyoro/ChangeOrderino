@@ -53,7 +53,8 @@ class ReminderScheduler:
             return None
 
         # Only check max retries if not bypassed (auto-reminders bypass this)
-        if not bypass_max_check and reminder_number > self.reminder_max_retries:
+        # Treat 0 as infinite retries
+        if not bypass_max_check and self.reminder_max_retries > 0 and reminder_number > self.reminder_max_retries:
             logger.info(f"Max reminders ({self.reminder_max_retries}) reached for ticket {tnm_ticket_id}")
             return None
 

@@ -130,7 +130,7 @@ export const MaterialItemTable: React.FC<MaterialItemTableProps> = ({
                         type="number"
                         step="0.01"
                         min="0"
-                        value={item.quantity}
+                        value={item.quantity || ''}
                         onChange={(e) => updateItem(index, { quantity: parseFloat(e.target.value) || 0 })}
                         className="min-h-[44px]"
                       />
@@ -158,7 +158,7 @@ export const MaterialItemTable: React.FC<MaterialItemTableProps> = ({
                             type="number"
                             step="0.01"
                             min="0"
-                            value={item.unit_price}
+                            value={item.unit_price || ''}
                             onChange={(e) => updateItem(index, { unit_price: parseFloat(e.target.value) || 0 })}
                             className="min-h-[44px]"
                           />

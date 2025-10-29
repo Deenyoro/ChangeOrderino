@@ -195,7 +195,7 @@ async def initialize_settings_from_env(db: AsyncSession) -> None:
             "value": str(app_config.REMINDER_MAX_RETRIES),
             "category": "reminders",
             "data_type": "integer",
-            "description": "Maximum number of reminder emails"
+            "description": "Maximum number of reminder emails (0 means infinite retries)"
         },
 
         # Approval Settings
@@ -392,6 +392,13 @@ async def initialize_settings_from_env(db: AsyncSession) -> None:
             "category": "tnm",
             "data_type": "boolean",
             "description": "Hide price/rate fields when creating TNM tickets (prices set by approver)"
+        },
+        {
+            "key": "MAX_TNM_PHOTOS",
+            "value": "5",
+            "category": "tnm",
+            "data_type": "integer",
+            "description": "Maximum number of photos/images that can be attached to a TNM ticket"
         },
     ]
 

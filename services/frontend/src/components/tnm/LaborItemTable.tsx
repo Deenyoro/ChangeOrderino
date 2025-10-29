@@ -164,7 +164,7 @@ export const LaborItemTable: React.FC<LaborItemTableProps> = ({
                           type="number"
                           step="0.25"
                           min="0"
-                          value={item.hours}
+                          value={item.hours || ''}
                           onChange={(e) => updateItem(index, { hours: parseFloat(e.target.value) || 0 })}
                           className="min-h-[44px]"
                         />

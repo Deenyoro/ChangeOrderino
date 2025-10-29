@@ -59,13 +59,16 @@ async def convert_pdf_to_images(
             # Generate unique filename
             image_filename = f"pdf-page-{page_num + 1}-{uuid.uuid4().hex[:8]}.jpg"
 
-            # Upload to storage
-            storage_url = await storage_service.upload_file(
-                file_data=img_buffer.getvalue(),
+            # Upload to storage (synchronous call, returns tuple)
+            storage_key, _ = storage_service.upload_file(
+                file_data=img_buffer,
                 filename=image_filename,
                 content_type="image/jpeg",
                 folder="temp/pdf-conversions"
             )
+
+            # Construct public URL from storage key
+            storage_url = f"/storage/{storage_key}"
 
             image_urls.append(storage_url)
             logger.info(f"Converted PDF page {page_num + 1} to image: {storage_url}")

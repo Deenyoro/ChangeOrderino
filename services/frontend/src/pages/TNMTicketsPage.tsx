@@ -99,48 +99,61 @@ export const TNMTicketsPage: React.FC = () => {
     filtered.sort((a, b) => {
       let aValue: any;
       let bValue: any;
+      let aIsNull = false;
+      let bIsNull = false;
 
       switch (sortField) {
         case 'tnm_number':
-          aValue = a.rfco_number || a.tnm_number;
-          bValue = b.rfco_number || b.tnm_number;
+          aValue = (a.rfco_number || a.tnm_number || '').toLowerCase();
+          bValue = (b.rfco_number || b.tnm_number || '').toLowerCase();
           break;
         case 'title':
-          aValue = a.title.toLowerCase();
-          bValue = b.title.toLowerCase();
+          aValue = (a.title || '').toLowerCase();
+          bValue = (b.title || '').toLowerCase();
           break;
         case 'project_number':
-          aValue = a.project_number.toLowerCase();
-          bValue = b.project_number.toLowerCase();
+          aValue = (a.project_number || '').toLowerCase();
+          bValue = (b.project_number || '').toLowerCase();
           break;
         case 'proposal_date':
           aValue = new Date(a.proposal_date).getTime();
           bValue = new Date(b.proposal_date).getTime();
           break;
         case 'due_date':
+          aIsNull = !a.due_date;
+          bIsNull = !b.due_date;
           aValue = a.due_date ? new Date(a.due_date).getTime() : 0;
           bValue = b.due_date ? new Date(b.due_date).getTime() : 0;
           break;
         case 'proposal_amount':
-          aValue = a.proposal_amount;
-          bValue = b.proposal_amount;
+          aValue = a.proposal_amount || 0;
+          bValue = b.proposal_amount || 0;
           break;
         case 'approved_amount':
-          aValue = a.approved_amount;
-          bValue = b.approved_amount;
+          aIsNull = !a.approved_amount || a.approved_amount === 0;
+          bIsNull = !b.approved_amount || b.approved_amount === 0;
+          aValue = a.approved_amount || 0;
+          bValue = b.approved_amount || 0;
           break;
         case 'response_date':
+          aIsNull = !a.response_date;
+          bIsNull = !b.response_date;
           aValue = a.response_date ? new Date(a.response_date).getTime() : 0;
           bValue = b.response_date ? new Date(b.response_date).getTime() : 0;
           break;
         case 'status':
-          aValue = a.status;
-          bValue = b.status;
+          aValue = a.status || '';
+          bValue = b.status || '';
           break;
         default:
           aValue = 0;
           bValue = 0;
       }
+
+      // Always sort null/empty values to the end
+      if (aIsNull && bIsNull) return 0;
+      if (aIsNull) return 1;
+      if (bIsNull) return -1;
 
       if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
       if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
@@ -399,6 +412,11 @@ export const TNMTicketsPage: React.FC = () => {
                   onChange={(e) => setSearchInput(e.target.value)}
                   className="pl-10"
                 />
+                {searchInput !== debouncedSearch && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-600"></div>
+                  </div>
+                )}
               </div>
             </div>
             <div className="w-full sm:w-48">
@@ -471,8 +489,9 @@ export const TNMTicketsPage: React.FC = () => {
                 </th>
                 <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <button
+                    type="button"
                     onClick={() => handleSort('tnm_number')}
-                    className="flex items-center hover:text-gray-700 transition-colors"
+                    className="flex items-center hover:text-gray-700 transition-colors cursor-pointer focus:outline-none focus:text-gray-900"
                   >
                     RFCO / TNM #
                     {renderSortIcon('tnm_number')}
@@ -480,8 +499,9 @@ export const TNMTicketsPage: React.FC = () => {
                 </th>
                 <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <button
+                    type="button"
                     onClick={() => handleSort('title')}
-                    className="flex items-center hover:text-gray-700 transition-colors"
+                    className="flex items-center hover:text-gray-700 transition-colors cursor-pointer focus:outline-none focus:text-gray-900"
                   >
                     Title
                     {renderSortIcon('title')}
@@ -489,8 +509,9 @@ export const TNMTicketsPage: React.FC = () => {
                 </th>
                 <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <button
+                    type="button"
                     onClick={() => handleSort('project_number')}
-                    className="flex items-center hover:text-gray-700 transition-colors"
+                    className="flex items-center hover:text-gray-700 transition-colors cursor-pointer focus:outline-none focus:text-gray-900"
                   >
                     Project
                     {renderSortIcon('project_number')}
@@ -498,8 +519,9 @@ export const TNMTicketsPage: React.FC = () => {
                 </th>
                 <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <button
+                    type="button"
                     onClick={() => handleSort('proposal_date')}
-                    className="flex items-center hover:text-gray-700 transition-colors"
+                    className="flex items-center hover:text-gray-700 transition-colors cursor-pointer focus:outline-none focus:text-gray-900"
                   >
                     Proposal Date
                     {renderSortIcon('proposal_date')}
@@ -507,8 +529,9 @@ export const TNMTicketsPage: React.FC = () => {
                 </th>
                 <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <button
+                    type="button"
                     onClick={() => handleSort('due_date')}
-                    className="flex items-center hover:text-gray-700 transition-colors"
+                    className="flex items-center hover:text-gray-700 transition-colors cursor-pointer focus:outline-none focus:text-gray-900"
                   >
                     Due Date
                     {renderSortIcon('due_date')}
@@ -516,8 +539,9 @@ export const TNMTicketsPage: React.FC = () => {
                 </th>
                 <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <button
+                    type="button"
                     onClick={() => handleSort('proposal_amount')}
-                    className="flex items-center hover:text-gray-700 transition-colors ml-auto"
+                    className="flex items-center hover:text-gray-700 transition-colors cursor-pointer focus:outline-none focus:text-gray-900 ml-auto"
                   >
                     Proposal Amount
                     {renderSortIcon('proposal_amount')}
@@ -525,8 +549,9 @@ export const TNMTicketsPage: React.FC = () => {
                 </th>
                 <th className="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <button
+                    type="button"
                     onClick={() => handleSort('approved_amount')}
-                    className="flex items-center hover:text-gray-700 transition-colors ml-auto"
+                    className="flex items-center hover:text-gray-700 transition-colors cursor-pointer focus:outline-none focus:text-gray-900 ml-auto"
                   >
                     Approved Amount
                     {renderSortIcon('approved_amount')}
@@ -534,8 +559,9 @@ export const TNMTicketsPage: React.FC = () => {
                 </th>
                 <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <button
+                    type="button"
                     onClick={() => handleSort('response_date')}
-                    className="flex items-center hover:text-gray-700 transition-colors"
+                    className="flex items-center hover:text-gray-700 transition-colors cursor-pointer focus:outline-none focus:text-gray-900"
                   >
                     Response Date
                     {renderSortIcon('response_date')}
@@ -549,8 +575,9 @@ export const TNMTicketsPage: React.FC = () => {
                 </th>
                 <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <button
+                    type="button"
                     onClick={() => handleSort('status')}
-                    className="flex items-center hover:text-gray-700 transition-colors"
+                    className="flex items-center hover:text-gray-700 transition-colors cursor-pointer focus:outline-none focus:text-gray-900"
                   >
                     Status
                     {renderSortIcon('status')}

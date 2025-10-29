@@ -98,6 +98,7 @@ def prepare_ticket_data_for_pdf(ticket: Any) -> Dict[str, Any]:
         'labor_subtotal': ticket.labor_subtotal or 0,
         'labor_ohp_percent': ticket.labor_ohp_percent or 0,
         'labor_total': ticket.labor_total or 0,
+        'total_labor_hours': ticket.total_labor_hours or 0,
         'material_subtotal': ticket.material_subtotal or 0,
         'material_ohp_percent': ticket.material_ohp_percent or 0,
         'material_total': ticket.material_total or 0,

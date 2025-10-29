@@ -583,8 +583,8 @@ async def _send_reminder_email_async(
                 if ticket.send_reminders_until_accepted or ticket.send_reminders_until_paid:
                     should_schedule_next = True
                     logger.info(f"Auto-reminders enabled for ticket {tnm_ticket_id}, scheduling next reminder")
-                # Otherwise, respect max retries limit
-                elif reminder_number < config.REMINDER_MAX_RETRIES:
+                # Otherwise, respect max retries limit (0 means infinite)
+                elif config.REMINDER_MAX_RETRIES == 0 or reminder_number < config.REMINDER_MAX_RETRIES:
                     should_schedule_next = True
 
                 if should_schedule_next:

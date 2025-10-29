@@ -134,6 +134,7 @@ async def list_tnm_tickets(
     limit: int = 100,
     project_id: UUID | None = None,
     status: TNMStatus | None = None,
+    search: str | None = None,
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
 ):
@@ -150,6 +151,16 @@ async def list_tnm_tickets(
 
     if status:
         query = query.where(TNMTicket.status == status)
+
+    if search:
+        search_term = f"%{search}%"
+        query = query.where(
+            (TNMTicket.tnm_number.ilike(search_term)) |
+            (TNMTicket.rfco_number.ilike(search_term)) |
+            (TNMTicket.title.ilike(search_term)) |
+            (TNMTicket.project_number.ilike(search_term)) |
+            (TNMTicket.description.ilike(search_term))
+        )
 
     query = query.offset(skip).limit(limit).order_by(TNMTicket.created_at.desc())
 

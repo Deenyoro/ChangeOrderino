@@ -12,6 +12,7 @@ import { useCreateTNMTicket, useTNMTicket, useUpdateTNMTicket } from '../hooks/u
 import { useAuth } from '../hooks/useAuth';
 import { AppDispatch, RootState } from '../store';
 import { fetchGlobalSettings } from '../store/slices/settingsSlice';
+import { apiClient } from '../api/client';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Select } from '../components/common/Select';
@@ -51,6 +52,7 @@ export const CreateTNMPage: React.FC = () => {
   // Get settings from Redux store
   const { globalSettings } = useSelector((state: RootState) => state.settings);
   const hidePricesOnCreation = globalSettings.find(s => s.key === 'HIDE_PRICES_ON_TNM_CREATION')?.value?.toLowerCase() === 'true' || false;
+  const maxPhotos = parseInt(globalSettings.find(s => s.key === 'MAX_TNM_PHOTOS')?.value || '5', 10);
 
   const [laborItems, setLaborItems] = useState<LaborItem[]>([]);
   const [materialItems, setMaterialItems] = useState<MaterialItem[]>([]);
@@ -141,12 +143,10 @@ export const CreateTNMPage: React.FC = () => {
     const files = e.target.files;
     if (!files) return;
 
-    const MAX_PHOTOS = 5;
-
     for (const file of Array.from(files)) {
       // Check if we've reached the limit
-      if (photos.length >= MAX_PHOTOS) {
-        alert(`Maximum of ${MAX_PHOTOS} images allowed. Additional files will be ignored.`);
+      if (photos.length >= maxPhotos) {
+        alert(`Maximum of ${maxPhotos} images allowed. Additional files will be ignored.`);
         break;
       }
 
@@ -157,22 +157,11 @@ export const CreateTNMPage: React.FC = () => {
           const formData = new FormData();
           formData.append('file', file);
 
-          const response = await fetch('/api/v1/utils/convert-pdf', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            },
-            body: formData,
-          });
-
-          if (!response.ok) {
-            throw new Error('Failed to convert PDF');
-          }
-
-          const result = await response.json();
+          const response = await apiClient.post<{ image_urls: string[] }>('v1/utils/convert-pdf', formData);
+          const result = response.data;
 
           // Add converted images up to the limit
-          const remainingSlots = MAX_PHOTOS - photos.length;
+          const remainingSlots = maxPhotos - photos.length;
           const imagesToAdd = result.image_urls.slice(0, remainingSlots);
 
           if (result.image_urls.length > remainingSlots) {
@@ -182,14 +171,15 @@ export const CreateTNMPage: React.FC = () => {
           setPhotos(prev => [...prev, ...imagesToAdd]);
         } catch (error) {
           console.error('Error converting PDF:', error);
-          alert('Failed to convert PDF. Please try again.');
+          const message = error instanceof Error ? error.message : 'Failed to convert PDF. Please try again.';
+          alert(message);
         }
       } else if (file.type.startsWith('image/')) {
         // Handle image files normally
         const reader = new FileReader();
         reader.onloadend = () => {
           setPhotos(prev => {
-            if (prev.length >= MAX_PHOTOS) {
+            if (prev.length >= maxPhotos) {
               return prev;
             }
             return [...prev, reader.result as string];
@@ -488,10 +478,10 @@ export const CreateTNMPage: React.FC = () => {
                     </button>
                   </div>
                 ))}
-                {photos.length < 5 ? (
+                {photos.length < maxPhotos ? (
                   <label className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer">
                     <Camera className="w-4 h-4 mr-2" />
-                    Add Photo/PDF
+                    Add Photo/PDF ({photos.length}/{maxPhotos})
                     <input
                       type="file"
                       accept="image/*,application/pdf"
@@ -502,7 +492,7 @@ export const CreateTNMPage: React.FC = () => {
                   </label>
                 ) : (
                   <div className="text-sm text-gray-500 italic">
-                    Maximum of 5 images reached
+                    Maximum of {maxPhotos} images reached
                   </div>
                 )}
               </div>

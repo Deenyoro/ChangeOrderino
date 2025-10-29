@@ -2,10 +2,11 @@
  * TNM Ticket Detail/Review Page - Admin view with full controls
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
-import { ArrowLeft, Edit, Trash2, Send, Mail, FileDown, CheckCircle, XCircle, AlertCircle, History, FileText } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Send, Mail, FileDown, CheckCircle, XCircle, AlertCircle, History, FileText, Camera } from 'lucide-react';
 import {
   useTNMTicket,
   useUpdateTNMStatus,
@@ -19,6 +20,7 @@ import {
 import { useEntityAuditLogs } from '../hooks/useAudit';
 import { useProject } from '../hooks/useProjects';
 import { tnmTicketsApi } from '../api/tnmTickets';
+import { apiClient } from '../api/client';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { Button } from '../components/common/Button';
@@ -32,10 +34,17 @@ import { TNMSummary } from '../components/tnm/TNMSummary';
 import { SignaturePad, SignatureDisplay } from '../components/common/SignaturePad';
 import { formatDate, formatDateTime, formatCurrency } from '../utils/formatters';
 import { TNMStatus } from '../types/tnmTicket';
+import { AppDispatch, RootState } from '../store';
+import { fetchGlobalSettings } from '../store/slices/settingsSlice';
 
 export const TNMDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
+
+  // Get settings from Redux store
+  const { globalSettings } = useSelector((state: RootState) => state.settings);
+  const maxPhotos = parseInt(globalSettings.find(s => s.key === 'MAX_TNM_PHOTOS')?.value || '5', 10);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isOHPEditModalOpen, setIsOHPEditModalOpen] = useState(false);
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
@@ -134,6 +143,11 @@ export const TNMDetailPage: React.FC = () => {
       });
     }
   }, [ticket]);
+
+  // Fetch settings on mount
+  React.useEffect(() => {
+    dispatch(fetchGlobalSettings());
+  }, [dispatch]);
 
   if (isLoading || !ticket) {
     return <LoadingSpinner />;
@@ -237,6 +251,57 @@ export const TNMDetailPage: React.FC = () => {
       console.error('Mark as paid error:', error);
       toast.error(error.response?.data?.detail || 'Failed to update payment status');
     }
+  };
+
+  const handleEditPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    for (const file of Array.from(files)) {
+      // Check if we've reached the limit
+      if (editData.photo_urls.length >= maxPhotos) {
+        alert(`Maximum of ${maxPhotos} images allowed. Additional files will be ignored.`);
+        break;
+      }
+
+      // Check if file is a PDF
+      if (file.type === 'application/pdf') {
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+
+          const response = await apiClient.post<{ image_urls: string[] }>('v1/utils/convert-pdf', formData);
+          const result = response.data;
+
+          // Add converted images up to the limit
+          const remainingSlots = maxPhotos - editData.photo_urls.length;
+          const imagesToAdd = result.image_urls.slice(0, remainingSlots);
+
+          if (result.image_urls.length > remainingSlots) {
+            alert(`PDF has ${result.image_urls.length} pages, but only ${remainingSlots} slots remaining.`);
+          }
+
+          setEditData({ ...editData, photo_urls: [...editData.photo_urls, ...imagesToAdd] });
+        } catch (error) {
+          console.error('Error converting PDF:', error);
+          const message = error instanceof Error ? error.message : 'Failed to convert PDF. Please try again.';
+          alert(message);
+        }
+      } else if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setEditData(prev => {
+            if (prev.photo_urls.length >= maxPhotos) return prev;
+            return { ...prev, photo_urls: [...prev.photo_urls, reader.result as string] };
+          });
+        };
+        reader.readAsDataURL(file);
+      } else {
+        alert('Only images and PDF files are allowed');
+      }
+    }
+
+    e.target.value = '';
   };
 
   const handleEditTicket = async () => {
@@ -1137,7 +1202,10 @@ export const TNMDetailPage: React.FC = () => {
             {/* Signature & Photos */}
             <div className="space-y-4">
               <h3 className="font-semibold text-gray-900">Signature & Documentation</h3>
+
+              {/* Signature */}
               <div>
+                <label className="label">GC Signature</label>
                 {editData.signature_url ? (
                   <SignatureDisplay
                     signature={editData.signature_url}
@@ -1166,6 +1234,52 @@ export const TNMDetailPage: React.FC = () => {
                     )}
                   </>
                 )}
+              </div>
+
+              {/* Photos */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="label mb-0">Attach Photos/PDFs (optional)</label>
+                  <span className="text-sm text-gray-600">
+                    {editData.photo_urls.length} / 5 images
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {editData.photo_urls.map((photo, index) => (
+                    <div key={index} className="relative border border-gray-300 rounded-lg p-2">
+                      <img src={photo} alt={`Photo ${index + 1}`} className="max-h-48 mx-auto rounded" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditData({
+                            ...editData,
+                            photo_urls: editData.photo_urls.filter((_, i) => i !== index)
+                          });
+                        }}
+                        className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 hover:bg-red-700"
+                      >
+                        <XCircle className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                  {editData.photo_urls.length < maxPhotos ? (
+                    <label className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer">
+                      <Camera className="w-4 h-4 mr-2" />
+                      Add Photo/PDF ({editData.photo_urls.length}/{maxPhotos})
+                      <input
+                        type="file"
+                        accept="image/*,application/pdf"
+                        multiple
+                        onChange={handleEditPhotoUpload}
+                        className="sr-only"
+                      />
+                    </label>
+                  ) : (
+                    <div className="text-sm text-gray-500 italic">
+                      Maximum of {maxPhotos} images reached
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 

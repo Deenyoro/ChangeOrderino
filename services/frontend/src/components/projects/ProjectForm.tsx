@@ -275,7 +275,7 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess }) 
               min: { value: 0, message: 'Must be 0 or greater' },
             })}
             error={errors.reminder_max_retries?.message}
-            helperText="How many reminder emails to send before stopping"
+            helperText="How many reminder emails to send before stopping (0 = infinite retries)"
             placeholder="4"
           />
         </div>
