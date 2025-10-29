@@ -18,7 +18,7 @@ pydantic-settings = "^2.6.0"
 python-multipart = "^0.0.18"
 python-jose = {extras = ["cryptography"], version = "^3.3.0"}
 passlib = {extras = ["bcrypt"], version = "^1.7.4"}
-python-keycloak = "^4.7.0"
+python-keycloak = "^5.0.0"
 aioredis = "^2.0.1"
 redis = "^5.2.0"
 rq = "^2.0.0"
