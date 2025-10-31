@@ -413,13 +413,21 @@ async def update_tnm_ticket(
     current_user: TokenData = Depends(get_current_user),
 ):
     """Update a TNM ticket"""
-    result = await db.execute(
-        select(TNMTicket).where(TNMTicket.id == ticket_id)
-    )
-    ticket = result.scalar_one_or_none()
+    try:
+        logger.info(f"Updating TNM ticket {ticket_id} by user {current_user.email}")
 
-    if not ticket:
-        raise HTTPException(status_code=404, detail="TNM ticket not found")
+        result = await db.execute(
+            select(TNMTicket).where(TNMTicket.id == ticket_id)
+        )
+        ticket = result.scalar_one_or_none()
+
+        if not ticket:
+            raise HTTPException(status_code=404, detail="TNM ticket not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"ERROR in update_tnm_ticket (initial): {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error updating ticket: {str(e)}")
 
     # Compute changes
     update_data = ticket_data.model_dump(exclude_unset=True)
@@ -498,8 +506,21 @@ async def update_tnm_ticket(
     )
 
     await db.commit()
-    await db.refresh(ticket)
 
+    # Re-fetch ticket with relationships for response
+    result = await db.execute(
+        select(TNMTicket)
+        .where(TNMTicket.id == ticket_id)
+        .options(
+            selectinload(TNMTicket.labor_items),
+            selectinload(TNMTicket.material_items),
+            selectinload(TNMTicket.equipment_items),
+            selectinload(TNMTicket.subcontractor_items),
+        )
+    )
+    ticket = result.scalar_one()
+
+    logger.info(f"Successfully updated TNM ticket {ticket_id}")
     return ticket
 
 
