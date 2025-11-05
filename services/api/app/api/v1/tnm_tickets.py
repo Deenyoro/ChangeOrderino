@@ -433,12 +433,96 @@ async def update_tnm_ticket(
     update_data = ticket_data.model_dump(exclude_unset=True)
     changes = audit_service.compute_changes(ticket, update_data)
 
-    # Update fields
+    # Update fields (excluding line items)
     for field, value in update_data.items():
-        setattr(ticket, field, value)
+        if field not in ['labor_items', 'material_items', 'equipment_items', 'subcontractor_items']:
+            setattr(ticket, field, value)
 
-    # Recalculate totals if OH&P changed
-    if any(field.endswith('_ohp_percent') for field in update_data):
+    # Handle line items if provided - replace existing with new
+    if 'labor_items' in update_data and update_data['labor_items'] is not None:
+        # Delete existing labor items
+        existing_labor = await db.execute(
+            select(LaborItem).where(LaborItem.tnm_ticket_id == ticket_id)
+        )
+        for item in existing_labor.scalars().all():
+            await db.delete(item)
+
+        # Create new labor items
+        labor_subtotal = Decimal('0')
+        total_labor_hours = Decimal('0')
+        for item_data in ticket_data.labor_items:
+            rate = settings.get_labor_rate(item_data.labor_type)
+            item = LaborItem(
+                tnm_ticket_id=ticket.id,
+                **item_data.model_dump(exclude={'rate_per_hour'}),
+                rate_per_hour=rate
+            )
+            db.add(item)
+            labor_subtotal += Decimal(str(item_data.hours)) * Decimal(str(rate))
+            total_labor_hours += Decimal(str(item_data.hours))
+
+        ticket.labor_subtotal = labor_subtotal
+        ticket.total_labor_hours = total_labor_hours
+
+    if 'material_items' in update_data and update_data['material_items'] is not None:
+        # Delete existing material items
+        existing_material = await db.execute(
+            select(MaterialItem).where(MaterialItem.tnm_ticket_id == ticket_id)
+        )
+        for item in existing_material.scalars().all():
+            await db.delete(item)
+
+        # Create new material items
+        material_subtotal = sum(
+            Decimal(str(item.quantity)) * Decimal(str(item.unit_price))
+            for item in ticket_data.material_items
+        ) if ticket_data.material_items else Decimal('0')
+        for item_data in ticket_data.material_items:
+            item = MaterialItem(tnm_ticket_id=ticket.id, **item_data.model_dump())
+            db.add(item)
+
+        ticket.material_subtotal = material_subtotal
+
+    if 'equipment_items' in update_data and update_data['equipment_items'] is not None:
+        # Delete existing equipment items
+        existing_equipment = await db.execute(
+            select(EquipmentItem).where(EquipmentItem.tnm_ticket_id == ticket_id)
+        )
+        for item in existing_equipment.scalars().all():
+            await db.delete(item)
+
+        # Create new equipment items
+        equipment_subtotal = sum(
+            Decimal(str(item.quantity)) * Decimal(str(item.unit_price))
+            for item in ticket_data.equipment_items
+        ) if ticket_data.equipment_items else Decimal('0')
+        for item_data in ticket_data.equipment_items:
+            item = EquipmentItem(tnm_ticket_id=ticket.id, **item_data.model_dump())
+            db.add(item)
+
+        ticket.equipment_subtotal = equipment_subtotal
+
+    if 'subcontractor_items' in update_data and update_data['subcontractor_items'] is not None:
+        # Delete existing subcontractor items
+        existing_subcontractor = await db.execute(
+            select(SubcontractorItem).where(SubcontractorItem.tnm_ticket_id == ticket_id)
+        )
+        for item in existing_subcontractor.scalars().all():
+            await db.delete(item)
+
+        # Create new subcontractor items
+        subcontractor_subtotal = sum(
+            Decimal(str(item.amount)) for item in ticket_data.subcontractor_items
+        ) if ticket_data.subcontractor_items else Decimal('0')
+        for item_data in ticket_data.subcontractor_items:
+            item = SubcontractorItem(tnm_ticket_id=ticket.id, **item_data.model_dump())
+            db.add(item)
+
+        ticket.subcontractor_subtotal = subcontractor_subtotal
+
+    # Recalculate totals if OH&P changed or line items were updated
+    if any(field.endswith('_ohp_percent') for field in update_data) or \
+       any(field.endswith('_items') for field in update_data):
         ticket.calculate_totals()
 
     # Process signature if it's a base64 data URL

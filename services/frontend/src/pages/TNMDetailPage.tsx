@@ -2,7 +2,7 @@
  * TNM Ticket Detail/Review Page - Admin view with full controls
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import toast from 'react-hot-toast';

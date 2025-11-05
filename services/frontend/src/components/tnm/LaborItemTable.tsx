@@ -167,6 +167,7 @@ export const LaborItemTable: React.FC<LaborItemTableProps> = ({
                           value={item.hours || ''}
                           onChange={(e) => updateItem(index, { hours: parseFloat(e.target.value) || 0 })}
                           className="min-h-[44px]"
+                          autoComplete="off"
                         />
                       )}
                     </td>

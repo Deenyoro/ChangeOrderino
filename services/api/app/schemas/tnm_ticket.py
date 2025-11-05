@@ -165,6 +165,12 @@ class TNMTicketUpdate(BaseModel):
     send_reminders_until_paid: Optional[bool] = None
     notes: Optional[str] = None
 
+    # Line items (optional - only update if provided)
+    labor_items: Optional[List[LaborItemCreate]] = None
+    material_items: Optional[List[MaterialItemCreate]] = None
+    equipment_items: Optional[List[EquipmentItemCreate]] = None
+    subcontractor_items: Optional[List[SubcontractorItemCreate]] = None
+
     # Attachments
     signature_url: Optional[str] = None
     photo_urls: Optional[List[str]] = None
