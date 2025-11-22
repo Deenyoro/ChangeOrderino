@@ -10,7 +10,7 @@ cssutils==2.11.1
 
 # Redis & Queue
 redis==5.2.0
-rq==2.0.0
+rq==2.6.1
 rq-scheduler==0.14.0
 
 # Database
