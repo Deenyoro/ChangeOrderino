@@ -127,10 +127,11 @@ export const CreateTNMPage: React.FC = () => {
   const equipmentSubtotal = calculateEquipmentTotal(equipmentItems);
   const subcontractorSubtotal = calculateSubcontractorTotal(subcontractorItems);
 
-  const laborOHP = project?.labor_ohp_percent || 20;
-  const materialOHP = project?.material_ohp_percent || 15;
-  const equipmentOHP = project?.equipment_ohp_percent || 10;
-  const subcontractorOHP = project?.subcontractor_ohp_percent || 5;
+  // Use ticket's OH&P values if editing, otherwise use project defaults
+  const laborOHP = existingTicket?.labor_ohp_percent ?? project?.labor_ohp_percent ?? 20;
+  const materialOHP = existingTicket?.material_ohp_percent ?? project?.material_ohp_percent ?? 15;
+  const equipmentOHP = existingTicket?.equipment_ohp_percent ?? project?.equipment_ohp_percent ?? 10;
+  const subcontractorOHP = existingTicket?.subcontractor_ohp_percent ?? project?.subcontractor_ohp_percent ?? 5;
 
   const laborTotal = calculateTotalWithOHP(laborSubtotal, laborOHP);
   const materialTotal = calculateTotalWithOHP(materialSubtotal, materialOHP);
@@ -257,7 +258,7 @@ export const CreateTNMPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto pb-48">
+    <div className="max-w-7xl mx-auto pb-64">
       {/* Header */}
       <div className="mb-6">
         <Link

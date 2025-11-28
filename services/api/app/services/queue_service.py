@@ -218,6 +218,41 @@ class QueueService:
             logger.error(f"✗ Failed to enqueue approval confirmation email: {str(e)}", exc_info=True)
             return None
 
+    def enqueue_pm_review_email(
+        self,
+        tnm_ticket_id: str,
+        recipient_emails: list[str]
+    ) -> Optional[str]:
+        """
+        Enqueue a PM review email job (to PM approvers)
+
+        Args:
+            tnm_ticket_id: TNM ticket UUID
+            recipient_emails: List of PM emails to notify
+
+        Returns:
+            Job ID if enqueued successfully, None otherwise
+        """
+        try:
+            job = self.email_queue.enqueue(
+                'app.worker.send_pm_review_email',
+                tnm_ticket_id=tnm_ticket_id,
+                recipient_emails=recipient_emails,
+                job_timeout='10m',
+                result_ttl=86400,
+                failure_ttl=604800
+            )
+
+            logger.info(
+                f"✓ Enqueued PM review email job {job.id} "
+                f"for ticket {tnm_ticket_id} to {len(recipient_emails)} recipients"
+            )
+            return str(job.id)
+
+        except Exception as e:
+            logger.error(f"✗ Failed to enqueue PM review email: {str(e)}", exc_info=True)
+            return None
+
     def get_job_status(self, job_id: str) -> Optional[dict]:
         """
         Get the status of a job

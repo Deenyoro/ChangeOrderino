@@ -336,7 +336,7 @@ export const TNMDetailPage: React.FC = () => {
   };
 
   const canEdit = ticket.status === TNMStatus.DRAFT || ticket.status === TNMStatus.PENDING_REVIEW;
-  const canSend = ticket.status === TNMStatus.READY_TO_SEND || ticket.status === TNMStatus.PENDING_REVIEW;
+  const canSend = ticket.status === TNMStatus.READY_TO_SEND;  // Only allow sending after PM approval
   const canRemind = ticket.status === TNMStatus.SENT || ticket.status === TNMStatus.VIEWED;
 
   return (

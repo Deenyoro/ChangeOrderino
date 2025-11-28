@@ -721,3 +721,110 @@ async def _send_approval_confirmation_email_async(
         except Exception as e:
             logger.error(f"Error processing approval confirmation email job: {str(e)}", exc_info=True)
             return False
+
+
+def send_pm_review_email(
+    tnm_ticket_id: str,
+    recipient_emails: list[str]
+) -> bool:
+    """
+    Send PM review email to PM approvers (job function - must be synchronous for RQ)
+
+    Args:
+        tnm_ticket_id: TNM ticket UUID
+        recipient_emails: List of PM approver emails
+
+    Returns:
+        True if sent successfully
+    """
+    return asyncio.run(_send_pm_review_email_async(tnm_ticket_id, recipient_emails))
+
+
+async def _send_pm_review_email_async(
+    tnm_ticket_id: str,
+    recipient_emails: list[str]
+) -> bool:
+    """Async implementation of send_pm_review_email"""
+    logger.info(f"Processing PM review email job for ticket {tnm_ticket_id}")
+
+    async with AsyncSessionLocal() as session:
+        try:
+            # Fetch ticket and project data
+            data = await get_tnm_ticket_with_project(session, tnm_ticket_id)
+            if not data:
+                logger.error(f"Ticket {tnm_ticket_id} not found")
+                return False
+
+            ticket, project = data
+
+            # Convert to dicts for template
+            ticket_dict = model_to_dict(ticket)
+            project_dict = model_to_dict(project)
+
+            # Build ticket link (direct to detail page for PM review)
+            ticket_link = f"{config.FRONTEND_URL}/tnm/{tnm_ticket_id}"
+
+            # Fetch company logo URL
+            company_logo_url = await get_company_logo_url(session)
+
+            # Fetch company settings from database
+            company_settings = await get_company_settings(session)
+
+            # Fetch email template settings
+            pm_template_settings = {
+                'subject': await get_setting_value(session, 'EMAIL_PM_REVIEW_SUBJECT',
+                    'TNM Review Required: {tnm_number} - {project_name}'),
+                'greeting': await get_setting_value(session, 'EMAIL_PM_REVIEW_GREETING',
+                    'Dear Project Manager,'),
+                'intro': await get_setting_value(session, 'EMAIL_PM_REVIEW_INTRO',
+                    'A new TNM ticket has been submitted and requires your review and approval before sending to the General Contractor.'),
+                'button_text': await get_setting_value(session, 'EMAIL_PM_REVIEW_BUTTON_TEXT',
+                    'Review TNM Ticket'),
+                'footer_text': await get_setting_value(session, 'EMAIL_PM_REVIEW_FOOTER_TEXT',
+                    'Please review the pricing and details, then mark as Ready to Send if approved.'),
+            }
+
+            # Render email
+            html_body, subject = template_service.render_pm_review_email(
+                tnm_ticket=ticket_dict,
+                project=project_dict,
+                ticket_link=ticket_link,
+                company_logo_url=company_logo_url,
+                template_settings=pm_template_settings,
+                company_settings=company_settings
+            )
+
+            # Send to each PM email
+            all_success = True
+            for email in recipient_emails:
+                success = await smtp_service.send_email(
+                    to_email=email,
+                    subject=subject,
+                    html_body=html_body
+                )
+
+                # Log to database
+                await log_email_to_db(
+                    session=session,
+                    tnm_ticket_id=tnm_ticket_id,
+                    to_email=email,
+                    subject=subject,
+                    html_body=html_body,
+                    email_type='pm_review',
+                    status='sent' if success else 'failed',
+                    error_message=None if success else 'SMTP send failed'
+                )
+
+                if not success:
+                    all_success = False
+
+            if all_success:
+                logger.info(f"✓ Successfully sent PM review emails for ticket {tnm_ticket_id}")
+            else:
+                logger.warning(f"⚠ Some PM review emails failed for ticket {tnm_ticket_id}")
+
+            return all_success
+
+        except Exception as e:
+            logger.error(f"Error processing PM review email job: {str(e)}", exc_info=True)
+            return False

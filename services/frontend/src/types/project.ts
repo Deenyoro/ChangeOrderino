@@ -13,6 +13,7 @@ export interface Project {
   gc_phone?: string;
   project_manager_id?: string;
   project_manager_name?: string;
+  pm_email?: string;
   material_ohp_percent: number;
   labor_ohp_percent: number;
   equipment_ohp_percent: number;
@@ -40,6 +41,7 @@ export interface ProjectFormData {
   gc_phone?: string;
   project_manager_id?: string;
   project_manager_name?: string;
+  pm_email?: string;
   material_ohp_percent?: number;
   labor_ohp_percent?: number;
   equipment_ohp_percent?: number;

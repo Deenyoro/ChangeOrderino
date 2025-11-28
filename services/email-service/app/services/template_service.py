@@ -306,6 +306,84 @@ class TemplateService:
             logger.error(f"Failed to render approval confirmation email: {str(e)}", exc_info=True)
             raise
 
+    def render_pm_review_email(
+        self,
+        tnm_ticket: Dict[str, Any],
+        project: Dict[str, Any],
+        ticket_link: str,
+        company_logo_url: Optional[str] = None,
+        template_settings: Optional[Dict[str, str]] = None,
+        company_settings: Optional[Dict[str, str]] = None
+    ) -> tuple[str, str]:
+        """
+        Render PM review email (sent to PM approvers when ticket is submitted for review)
+
+        Args:
+            tnm_ticket: TNM ticket data
+            project: Project data
+            ticket_link: URL to view/edit ticket in system
+            company_logo_url: Company logo URL (optional)
+            template_settings: Email template text overrides (optional)
+            company_settings: Company settings (optional)
+
+        Returns:
+            Tuple of (html_body, subject)
+        """
+        try:
+            # Use template settings or defaults
+            settings = template_settings or {}
+            # Use company settings from database or fallback to config
+            company = company_settings or {
+                'company_name': config.COMPANY_NAME,
+                'company_email': config.COMPANY_EMAIL,
+                'company_phone': config.COMPANY_PHONE
+            }
+
+            subject_template = settings.get('subject', 'TNM Review Required: {tnm_number} - {project_name}')
+            subject = subject_template.format(
+                tnm_number=tnm_ticket['tnm_number'],
+                project_name=project['name']
+            )
+
+            context = {
+                'subject': subject,
+                'company_name': company['company_name'],
+                'company_email': company['company_email'],
+                'company_phone': company['company_phone'],
+                'company_logo_url': company_logo_url,
+                'tnm_number': tnm_ticket['tnm_number'],
+                'rfco_number': tnm_ticket.get('rfco_number'),
+                'project_name': project['name'],
+                'project_number': project['project_number'],
+                'title': tnm_ticket['title'],
+                'description': tnm_ticket.get('description'),
+                'proposal_date': self._format_date(tnm_ticket['proposal_date']),
+                'submitter_name': tnm_ticket['submitter_name'],
+                'proposal_amount': float(tnm_ticket.get('proposal_amount', 0)),
+                'ticket_link': ticket_link,
+                # Template settings
+                'email_greeting': settings.get('greeting', 'Dear Project Manager,'),
+                'email_intro': settings.get('intro',
+                    'A new TNM ticket has been submitted and requires your review and approval before sending to the General Contractor.'),
+                'email_button_text': settings.get('button_text', 'Review TNM Ticket'),
+                'email_footer_text': settings.get('footer_text',
+                    'Please review the pricing and details, then mark as Ready to Send if approved.'),
+            }
+
+            # Use a similar template to approval_confirmation but with PM review specific content
+            template = self.env.get_template('pm_review.html')
+            html = template.render(**context)
+
+            # Inline CSS
+            html = premailer.transform(html)
+
+            logger.info(f"Rendered PM review email for {tnm_ticket['tnm_number']}")
+            return html, subject
+
+        except Exception as e:
+            logger.error(f"Failed to render PM review email: {str(e)}", exc_info=True)
+            raise
+
 
 # Global template service instance
 template_service = TemplateService()

@@ -132,6 +132,19 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess }) 
             {...register('project_manager_name')}
             placeholder="PM name"
           />
+          <Input
+            label="Project Manager Email"
+            type="email"
+            {...register('pm_email', {
+              pattern: {
+                value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                message: 'Invalid email address',
+              },
+            })}
+            error={errors.pm_email?.message}
+            placeholder="pm@example.com"
+            helperText="Email for TNM ticket approval notifications"
+          />
         </div>
       </div>
 

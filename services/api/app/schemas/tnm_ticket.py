@@ -196,22 +196,22 @@ class TNMTicketResponse(TNMTicketBase):
     rate_carpenter: Optional[Decimal]
     rate_laborer: Optional[Decimal]
 
-    # Calculated totals
-    labor_subtotal: Decimal
-    labor_total: Decimal
-    total_labor_hours: Decimal
+    # Calculated totals (all optional as they can be NULL)
+    labor_subtotal: Optional[Decimal] = None
+    labor_total: Optional[Decimal] = None
+    total_labor_hours: Optional[Decimal] = None
 
-    material_subtotal: Decimal
-    material_total: Decimal
+    material_subtotal: Optional[Decimal] = None
+    material_total: Optional[Decimal] = None
 
-    equipment_subtotal: Decimal
-    equipment_total: Decimal
+    equipment_subtotal: Optional[Decimal] = None
+    equipment_total: Optional[Decimal] = None
 
-    subcontractor_subtotal: Decimal
-    subcontractor_total: Decimal
+    subcontractor_subtotal: Optional[Decimal] = None
+    subcontractor_total: Optional[Decimal] = None
 
-    proposal_amount: Decimal
-    approved_amount: Decimal
+    proposal_amount: Optional[Decimal] = None
+    approved_amount: Optional[Decimal] = None
 
     # Line items (optional, loaded separately)
     labor_items: List[LaborItemResponse] = []
@@ -331,6 +331,17 @@ class TNMTicketEditRequest(BaseModel):
     labor_ohp_percent: Optional[Decimal] = Field(None, ge=0, le=100)
     equipment_ohp_percent: Optional[Decimal] = Field(None, ge=0, le=100)
     subcontractor_ohp_percent: Optional[Decimal] = Field(None, ge=0, le=100)
+
+    # Price fields (subtotals and totals)
+    labor_subtotal: Optional[Decimal] = Field(None, ge=0)
+    labor_total: Optional[Decimal] = Field(None, ge=0)
+    material_subtotal: Optional[Decimal] = Field(None, ge=0)
+    material_total: Optional[Decimal] = Field(None, ge=0)
+    equipment_subtotal: Optional[Decimal] = Field(None, ge=0)
+    equipment_total: Optional[Decimal] = Field(None, ge=0)
+    subcontractor_subtotal: Optional[Decimal] = Field(None, ge=0)
+    subcontractor_total: Optional[Decimal] = Field(None, ge=0)
+    proposal_amount: Optional[Decimal] = Field(None, ge=0)
 
     # Labor rate overrides
     rate_project_manager: Optional[Decimal] = Field(None, ge=0)

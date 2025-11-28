@@ -24,6 +24,7 @@ class Project(Base):
     # Project Manager
     project_manager_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"))
     project_manager_name = Column(String(255))
+    pm_email = Column(String(255))  # Project Manager email for approvals
 
     # Default OH&P percentages (nullable = use global defaults if NULL)
     material_ohp_percent = Column(Numeric(5, 2), nullable=True)

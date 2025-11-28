@@ -38,6 +38,7 @@ from app.services.pdf_generator import pdf_generator
 from app.services.queue_service import queue_service
 from app.services.audit_service import audit_service
 from app.services.storage import storage_service
+from app.services.settings_service import SettingsService
 from app.models.asset import Asset
 from app.utils.pdf_helpers import prepare_ticket_data_for_pdf, prepare_project_data_for_pdf
 from io import BytesIO
@@ -429,13 +430,28 @@ async def update_tnm_ticket(
         logger.error(f"ERROR in update_tnm_ticket (initial): {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error updating ticket: {str(e)}")
 
-    # Compute changes
-    update_data = ticket_data.model_dump(exclude_unset=True)
-    changes = audit_service.compute_changes(ticket, update_data)
-
     # Update fields (excluding line items)
+    update_data = ticket_data.model_dump(exclude_unset=True)
+
+    # Compute changes BEFORE modifying the ticket object
+    # Exclude relationship/list fields that would trigger lazy loading
+    excluded_fields = ['labor_items', 'material_items', 'equipment_items', 'subcontractor_items']
+    audit_data = {k: v for k, v in update_data.items() if k not in excluded_fields}
+    changes = {}
+    for field, new_value in audit_data.items():
+        try:
+            old_value = getattr(ticket, field, None)
+            old_str = str(old_value) if old_value is not None else None
+            new_str = str(new_value) if new_value is not None else None
+            if old_str != new_str:
+                changes[field] = {'old': old_str, 'new': new_str}
+        except:
+            # Skip fields that can't be accessed
+            pass
+
+    # Now apply updates
     for field, value in update_data.items():
-        if field not in ['labor_items', 'material_items', 'equipment_items', 'subcontractor_items']:
+        if field not in excluded_fields:
             setattr(ticket, field, value)
 
     # Handle line items if provided - replace existing with new
@@ -1073,6 +1089,40 @@ async def update_ticket_status(
         f"{old_status.value} → {new_status.value} by {current_user.email}"
     )
 
+    # If status changed to PENDING_REVIEW, send notification to PM approvers
+    if new_status == TNMStatus.pending_review and old_status != TNMStatus.pending_review:
+        logger.info(f"Sending PM review notification for ticket {ticket.tnm_number}")
+        try:
+            # Get PM approval emails from settings and project
+            approval_emails_setting = await SettingsService.get_setting('APPROVAL_EMAILS', db) or ''
+            approval_emails = [email.strip() for email in str(approval_emails_setting).split(',') if email.strip()]
+
+            # Get project to access pm_email
+            project_result = await db.execute(select(Project).where(Project.id == ticket.project_id))
+            project = project_result.scalar_one_or_none()
+
+            if project and project.pm_email:
+                approval_emails.append(project.pm_email)
+
+            # Remove duplicates
+            approval_emails = list(set(approval_emails))
+
+            if approval_emails:
+                # Queue email to PM approvers
+                job_id = queue_service.enqueue_pm_review_email(
+                    tnm_ticket_id=str(ticket.id),
+                    recipient_emails=approval_emails,
+                )
+                if job_id:
+                    logger.info(f"Queued PM review email for {ticket.tnm_number} to {len(approval_emails)} recipients (job {job_id})")
+                else:
+                    logger.warning(f"Failed to queue PM review email for {ticket.tnm_number}")
+            else:
+                logger.warning(f"No PM approval emails configured for ticket {ticket.tnm_number}")
+        except Exception as e:
+            logger.error(f"Failed to send PM review notification: {e}", exc_info=True)
+            # Don't fail the status update if email fails
+
     return ticket
 
 
@@ -1602,6 +1652,43 @@ async def edit_tnm_ticket(
         if edit_data.subcontractor_ohp_percent is not None and edit_data.subcontractor_ohp_percent != ticket.subcontractor_ohp_percent:
             changes['subcontractor_ohp_percent'] = {'old': str(ticket.subcontractor_ohp_percent), 'new': str(edit_data.subcontractor_ohp_percent)}
             ticket.subcontractor_ohp_percent = edit_data.subcontractor_ohp_percent
+
+        # Price fields (subtotals and totals)
+        if edit_data.labor_subtotal is not None and edit_data.labor_subtotal != ticket.labor_subtotal:
+            changes['labor_subtotal'] = {'old': str(ticket.labor_subtotal), 'new': str(edit_data.labor_subtotal)}
+            ticket.labor_subtotal = edit_data.labor_subtotal
+
+        if edit_data.labor_total is not None and edit_data.labor_total != ticket.labor_total:
+            changes['labor_total'] = {'old': str(ticket.labor_total), 'new': str(edit_data.labor_total)}
+            ticket.labor_total = edit_data.labor_total
+
+        if edit_data.material_subtotal is not None and edit_data.material_subtotal != ticket.material_subtotal:
+            changes['material_subtotal'] = {'old': str(ticket.material_subtotal), 'new': str(edit_data.material_subtotal)}
+            ticket.material_subtotal = edit_data.material_subtotal
+
+        if edit_data.material_total is not None and edit_data.material_total != ticket.material_total:
+            changes['material_total'] = {'old': str(ticket.material_total), 'new': str(edit_data.material_total)}
+            ticket.material_total = edit_data.material_total
+
+        if edit_data.equipment_subtotal is not None and edit_data.equipment_subtotal != ticket.equipment_subtotal:
+            changes['equipment_subtotal'] = {'old': str(ticket.equipment_subtotal), 'new': str(edit_data.equipment_subtotal)}
+            ticket.equipment_subtotal = edit_data.equipment_subtotal
+
+        if edit_data.equipment_total is not None and edit_data.equipment_total != ticket.equipment_total:
+            changes['equipment_total'] = {'old': str(ticket.equipment_total), 'new': str(edit_data.equipment_total)}
+            ticket.equipment_total = edit_data.equipment_total
+
+        if edit_data.subcontractor_subtotal is not None and edit_data.subcontractor_subtotal != ticket.subcontractor_subtotal:
+            changes['subcontractor_subtotal'] = {'old': str(ticket.subcontractor_subtotal), 'new': str(edit_data.subcontractor_subtotal)}
+            ticket.subcontractor_subtotal = edit_data.subcontractor_subtotal
+
+        if edit_data.subcontractor_total is not None and edit_data.subcontractor_total != ticket.subcontractor_total:
+            changes['subcontractor_total'] = {'old': str(ticket.subcontractor_total), 'new': str(edit_data.subcontractor_total)}
+            ticket.subcontractor_total = edit_data.subcontractor_total
+
+        if edit_data.proposal_amount is not None and edit_data.proposal_amount != ticket.proposal_amount:
+            changes['proposal_amount'] = {'old': str(ticket.proposal_amount), 'new': str(edit_data.proposal_amount)}
+            ticket.proposal_amount = edit_data.proposal_amount
 
         # Labor Rates
         if edit_data.rate_project_manager is not None and edit_data.rate_project_manager != ticket.rate_project_manager:

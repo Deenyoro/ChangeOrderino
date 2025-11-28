@@ -17,6 +17,7 @@ class ProjectBase(BaseModel):
     gc_phone: Optional[str] = None
     project_manager_id: Optional[UUID] = None
     project_manager_name: Optional[str] = None
+    pm_email: Optional[EmailStr] = None
 
     # Settings overrides (nullable = use global defaults)
     material_ohp_percent: Optional[Decimal] = Field(None, ge=0, le=100)
@@ -51,6 +52,7 @@ class ProjectUpdate(BaseModel):
     gc_phone: Optional[str] = None
     project_manager_id: Optional[UUID] = None
     project_manager_name: Optional[str] = None
+    pm_email: Optional[EmailStr] = None
 
     # Settings overrides
     material_ohp_percent: Optional[Decimal] = Field(None, ge=0, le=100)

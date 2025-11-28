@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="header">
+    <h1>TNM Review Required</h1>
+    <p>{{ tnm_number }}</p>
+</div>
+
+<div class="content">
+    <div class="alert" style="background-color: #fef3c7; border-left-color: #f59e0b;">
+        <strong>Action Required</strong> - This TNM ticket requires your review and approval before being sent to the GC.
+    </div>
+
+    <p>{{ email_greeting }}</p>
+
+    <p>
+        {{ email_intro }}
+    </p>
+
+    <div class="info-box">
+        <h3>Project Information</h3>
+        <div class="info-row">
+            <span class="info-label">Project:</span>
+            <span class="info-value">{{ project_name }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Project Number:</span>
+            <span class="info-value">{{ project_number }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">TNM Number:</span>
+            <span class="info-value">{{ tnm_number }}</span>
+        </div>
+        {% if rfco_number %}
+        <div class="info-row">
+            <span class="info-label">RFCO Number:</span>
+            <span class="info-value">{{ rfco_number }}</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="info-box">
+        <h3>TNM Ticket Details</h3>
+        <div class="info-row">
+            <span class="info-label">Title:</span>
+            <span class="info-value">{{ title }}</span>
+        </div>
+        {% if description %}
+        <div class="info-row">
+            <span class="info-label">Description:</span>
+            <span class="info-value">{{ description }}</span>
+        </div>
+        {% endif %}
+        <div class="info-row">
+            <span class="info-label">Submitted By:</span>
+            <span class="info-value">{{ submitter_name }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Proposal Date:</span>
+            <span class="info-value">{{ proposal_date }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Proposal Amount:</span>
+            <span class="info-value" style="font-weight: 600; color: #1d4ed8;">${{ "%.2f"|format(proposal_amount) }}</span>
+        </div>
+    </div>
+
+    <div class="button-container">
+        <a href="{{ ticket_link }}" class="button">
+            {{ email_button_text }}
+        </a>
+    </div>
+
+    <p style="margin-top: 30px; color: #64748b; font-size: 14px;">
+        {{ email_footer_text }}
+    </p>
+
+    <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #64748b; text-align: center;">
+        This is an automated notification from the TNM Management System. Click the button above to review and approve the ticket.
+    </p>
+</div>
+{% endblock %}

@@ -213,6 +213,13 @@ async def initialize_settings_from_env(db: AsyncSession) -> None:
             "data_type": "boolean",
             "description": "Require General Contractor signature on approval page"
         },
+        {
+            "key": "APPROVAL_EMAILS",
+            "value": "",
+            "category": "approval",
+            "data_type": "string",
+            "description": "Comma-separated list of email addresses to receive TNM approval notifications (PM approvers)"
+        },
 
         # Email Template Settings - RFCO Send Email
         {
@@ -302,6 +309,43 @@ async def initialize_settings_from_env(db: AsyncSession) -> None:
             "category": "email_templates",
             "data_type": "string",
             "description": "Introduction text for approval confirmation email"
+        },
+
+        # Email Template Settings - PM Review Email
+        {
+            "key": "EMAIL_PM_REVIEW_SUBJECT",
+            "value": "TNM Review Required: {tnm_number} - {project_name}",
+            "category": "email_templates",
+            "data_type": "string",
+            "description": "Subject line for PM review email (variables: {tnm_number}, {project_name})"
+        },
+        {
+            "key": "EMAIL_PM_REVIEW_GREETING",
+            "value": "Dear Project Manager,",
+            "category": "email_templates",
+            "data_type": "string",
+            "description": "Greeting for PM review email"
+        },
+        {
+            "key": "EMAIL_PM_REVIEW_INTRO",
+            "value": "A new TNM ticket has been submitted and requires your review and approval before sending to the General Contractor.",
+            "category": "email_templates",
+            "data_type": "string",
+            "description": "Introduction text for PM review email"
+        },
+        {
+            "key": "EMAIL_PM_REVIEW_BUTTON_TEXT",
+            "value": "Review TNM Ticket",
+            "category": "email_templates",
+            "data_type": "string",
+            "description": "Button text for PM review email"
+        },
+        {
+            "key": "EMAIL_PM_REVIEW_FOOTER_TEXT",
+            "value": "Please review the pricing and details, then mark as Ready to Send if approved.",
+            "category": "email_templates",
+            "data_type": "string",
+            "description": "Footer text for PM review email"
         },
 
         # Email Template Settings - Due Date
