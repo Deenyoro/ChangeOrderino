@@ -1,7 +1,7 @@
 # Email Service Dependencies
 
 # Email & SMTP
-aiosmtplib==3.0.2
+aiosmtplib==5.1.0
 
 # Template Engine
 jinja2==3.1.4
