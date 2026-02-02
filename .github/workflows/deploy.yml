@@ -17,7 +17,7 @@ on:
 jobs:
   deploy:
     name: Deploy to Production
-    runs-on: ubuntu-latest
+    runs-on: ag-runners
     environment: production
 
     steps:

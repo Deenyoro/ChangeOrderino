@@ -11,7 +11,7 @@ on:
 jobs:
   check-frontend-deps:
     name: Check Frontend Dependencies
-    runs-on: ubuntu-latest
+    runs-on: ag-runners
     steps:
       - uses: actions/checkout@v5
 
@@ -45,7 +45,7 @@ jobs:
 
   check-backend-deps:
     name: Check Backend Dependencies
-    runs-on: ubuntu-latest
+    runs-on: ag-runners
     steps:
       - uses: actions/checkout@v5
 

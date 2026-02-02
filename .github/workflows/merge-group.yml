@@ -8,7 +8,7 @@ on:
 jobs:
   quick-checks:
     name: Quick CI Checks for Merge Queue
-    runs-on: ubuntu-latest
+    runs-on: ag-runners
     steps:
       - uses: actions/checkout@v5
 
