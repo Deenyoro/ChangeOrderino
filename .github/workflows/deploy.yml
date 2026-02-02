@@ -17,7 +17,7 @@ on:
 jobs:
   deploy:
     name: Deploy to Production
-    runs-on: ag-runners
+    runs-on: changeorderino
     environment: production
 
     steps:

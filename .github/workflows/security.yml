@@ -18,7 +18,7 @@ permissions:
 jobs:
   basic-security-scan:
     name: Basic Security Scan
-    runs-on: ag-runners
+    runs-on: changeorderino
 
     permissions:
       contents: read
@@ -43,7 +43,7 @@ jobs:
 
   codeql-analysis:
     name: CodeQL Analysis
-    runs-on: ag-runners
+    runs-on: changeorderino
 
     permissions:
       contents: read
@@ -93,7 +93,7 @@ jobs:
 
   security-summary:
     name: Security Scan Summary
-    runs-on: ag-runners
+    runs-on: changeorderino
     needs: [basic-security-scan, codeql-analysis]
     if: always()
 

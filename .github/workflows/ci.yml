@@ -13,7 +13,7 @@ env:
 jobs:
   frontend-test:
     name: Frontend Tests
-    runs-on: ag-runners
+    runs-on: changeorderino
     # Fail immediately if any step fails
     continue-on-error: false
 
@@ -42,7 +42,7 @@ jobs:
 
   api-test:
     name: Backend API Tests
-    runs-on: ag-runners
+    runs-on: changeorderino
     needs: frontend-test  # Only run if frontend-test succeeds
 
     services:
@@ -116,7 +116,7 @@ jobs:
 
   docker-build:
     name: Docker Build Test
-    runs-on: ag-runners
+    runs-on: changeorderino
     needs: api-test  # Sequential: frontend -> api -> docker
 
     strategy:
@@ -176,7 +176,7 @@ jobs:
 
   integration-test:
     name: Integration Test
-    runs-on: ag-runners
+    runs-on: changeorderino
     needs: docker-build  # Sequential: frontend -> api -> docker -> integration
 
     steps:

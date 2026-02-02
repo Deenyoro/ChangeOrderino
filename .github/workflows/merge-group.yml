@@ -8,7 +8,7 @@ on:
 jobs:
   quick-checks:
     name: Quick CI Checks for Merge Queue
-    runs-on: ag-runners
+    runs-on: changeorderino
     steps:
       - uses: actions/checkout@v5
 

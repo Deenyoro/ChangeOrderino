@@ -22,7 +22,7 @@ env:
 
 jobs:
   build-and-push:
-    runs-on: ag-runners
+    runs-on: changeorderino
     permissions:
       contents: read
       packages: write
@@ -114,7 +114,7 @@ jobs:
 
   summary:
     needs: [build-and-push]
-    runs-on: ag-runners
+    runs-on: changeorderino
     if: always()
 
     steps:
