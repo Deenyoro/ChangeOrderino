@@ -45,34 +45,53 @@ jobs:
     runs-on: changeorderino
     needs: frontend-test  # Only run if frontend-test succeeds
 
-    services:
-      postgres:
-        image: postgres:18-alpine
-        env:
-          POSTGRES_USER: changeorderino
-          POSTGRES_PASSWORD: changeorderinoPass123!
-          POSTGRES_DB: changeorderino
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
-      redis:
-        image: redis:8-alpine
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 6379:6379
-
     steps:
     - name: Checkout code
       uses: actions/checkout@v5
+
+    - name: Login to Docker Hub
+      if: ${{ vars.DOCKERHUB_USERNAME != '' }}
+      uses: docker/login-action@v3
+      with:
+        username: ${{ vars.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Start test services
+      run: |
+        # Start PostgreSQL
+        docker run -d --name postgres \
+          -e POSTGRES_USER=changeorderino \
+          -e POSTGRES_PASSWORD=changeorderinoPass123! \
+          -e POSTGRES_DB=changeorderino \
+          -p 5432:5432 \
+          postgres:18-alpine
+
+        # Start Redis
+        docker run -d --name redis \
+          -p 6379:6379 \
+          redis:8-alpine
+
+        # Wait for PostgreSQL to be ready
+        echo "Waiting for PostgreSQL..."
+        for i in {1..30}; do
+          if docker exec postgres pg_isready -U changeorderino -d changeorderino 2>/dev/null; then
+            echo "PostgreSQL is ready!"
+            break
+          fi
+          echo "Attempt $i/30..."
+          sleep 2
+        done
+
+        # Wait for Redis to be ready
+        echo "Waiting for Redis..."
+        for i in {1..30}; do
+          if docker exec redis redis-cli ping 2>/dev/null | grep -q PONG; then
+            echo "Redis is ready!"
+            break
+          fi
+          echo "Attempt $i/30..."
+          sleep 1
+        done
 
     - name: Setup Python
       uses: actions/setup-python@v6
@@ -113,6 +132,12 @@ jobs:
             await conn.close()
         asyncio.run(test())
         "
+
+    - name: Cleanup test services
+      if: always()
+      run: |
+        docker stop postgres redis || true
+        docker rm postgres redis || true
 
   docker-build:
     name: Docker Build Test
