@@ -58,18 +58,18 @@ jobs:
 
     - name: Start test services
       run: |
-        # Start PostgreSQL
+        # Start PostgreSQL (using public ECR to avoid Docker Hub rate limits)
         docker run -d --name postgres \
           -e POSTGRES_USER=changeorderino \
           -e POSTGRES_PASSWORD=changeorderinoPass123! \
           -e POSTGRES_DB=changeorderino \
           -p 5432:5432 \
-          postgres:18-alpine
+          public.ecr.aws/docker/library/postgres:16-alpine
 
-        # Start Redis
+        # Start Redis (using public ECR to avoid Docker Hub rate limits)
         docker run -d --name redis \
           -p 6379:6379 \
-          redis:8-alpine
+          public.ecr.aws/docker/library/redis:8-alpine
 
         # Wait for PostgreSQL to be ready
         echo "Waiting for PostgreSQL..."
