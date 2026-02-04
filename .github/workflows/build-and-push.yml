@@ -58,7 +58,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Copy LICENSE files to frontend
       if: matrix.service.name == 'frontend' || matrix.service.name == 'frontend-noauth'
