@@ -20,7 +20,7 @@ python-jose = {extras = ["cryptography"], version = "^3.3.0"}
 passlib = {extras = ["bcrypt"], version = "^1.7.4"}
 python-keycloak = "^4.7.0"
 aioredis = "^2.0.1"
-redis = "^5.2.0"
+redis = "^7.0.0"
 rq = "^2.0.0"
 minio = "^7.2.0"
 aiofiles = "^24.1.0"
